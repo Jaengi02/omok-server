@@ -14,7 +14,7 @@ app.use(express.static('public'));
 // 1. MongoDB 연결 (가장 중요!)
 // ---------------------------------------------------------
 // ▼▼▼ 아래 "여기에비밀번호입력"을 진짜 비밀번호로 바꾸세요! ▼▼▼
-const MONGO_URI = "mongodb+srv://koojj321:<koo020110>@cluster0.yh4yszy.mongodb.net/?appName=Cluster0";
+const MONGO_URI = "mongodb+srv://koojj321:abcd1234@cluster0.yh4yszy.mongodb.net/?appName=Cluster0";
 
 mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ 데이터베이스(MongoDB) 연결 성공!'))
