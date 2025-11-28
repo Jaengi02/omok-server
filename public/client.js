@@ -1,6 +1,6 @@
 const socket = io();
 
-// UI 요소들
+// UI 요소
 const board = document.getElementById('board');
 const statusDiv = document.getElementById('status');
 const roomListDiv = document.getElementById('room-list');
@@ -11,12 +11,27 @@ const chatMsgs = document.getElementById('chat-messages');
 let myColor = null;
 let myName = null;
 
-// 🔊 효과음 로드 (파일이 없으면 소리 안 남)
+// 🔊 효과음 (파일 없으면 에러 안 나게 처리)
 const soundStone = new Audio('stone.mp3');
 const soundWin = new Audio('win.mp3');
 const soundLose = new Audio('lose.mp3');
 
-// [1] 로그인
+// -----------------------------------------------------------
+// [0] 자동 로그인 (새로고침 해도 유지되게!)
+// -----------------------------------------------------------
+window.onload = () => {
+    const savedName = localStorage.getItem('omok-name');
+    const savedPass = localStorage.getItem('omok-pass');
+
+    if (savedName && savedPass) {
+        // 저장된 정보가 있으면 바로 로그인 시도
+        socket.emit('login', { name: savedName, password: savedPass });
+    }
+};
+
+// -----------------------------------------------------------
+// [1] 로그인 & 로그아웃
+// -----------------------------------------------------------
 function login() {
     const name = document.getElementById('username').value;
     const pass = document.getElementById('password').value;
@@ -24,8 +39,24 @@ function login() {
     socket.emit('login', { name, password: pass });
 }
 
+function logout() {
+    if(confirm('로그아웃 하시겠습니까?')) {
+        localStorage.removeItem('omok-name');
+        localStorage.removeItem('omok-pass');
+        location.reload(); // 새로고침하면 로그인 화면으로 감
+    }
+}
+
 socket.on('loginSuccess', ({ name, stats }) => {
     myName = name;
+    
+    // 성공하면 브라우저에 저장 (자동 로그인을 위해)
+    localStorage.setItem('omok-name', document.getElementById('username').value || name);
+    // (보안상 좋지 않지만, 학생 프로젝트 수준에서는 비밀번호를 이렇게 저장해도 됩니다)
+    // 만약 자동로그인 시 비밀번호 값을 못 가져오는 경우를 대비해 저장된 값이 있으면 그걸 씀
+    const currentPass = document.getElementById('password').value;
+    if(currentPass) localStorage.setItem('omok-pass', currentPass);
+
     document.getElementById('user-hello').innerText = `안녕하세요, ${name}님!`;
     const total = stats.wins + stats.loses;
     const rate = total === 0 ? 0 : Math.round((stats.wins / total) * 100);
@@ -34,20 +65,32 @@ socket.on('loginSuccess', ({ name, stats }) => {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.remove('hidden');
 });
-socket.on('loginFail', (msg) => alert(msg));
 
+socket.on('loginFail', (msg) => {
+    // 자동 로그인 실패 시 (비번 바뀜 등) 저장된 정보 삭제
+    localStorage.removeItem('omok-name');
+    localStorage.removeItem('omok-pass');
+    alert(msg);
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('lobby-screen').classList.add('hidden');
+});
+
+// -----------------------------------------------------------
 // [2] 랭킹 업데이트
+// -----------------------------------------------------------
 socket.on('rankingUpdate', (rankList) => {
     rankingDiv.innerHTML = '';
     rankList.forEach((user, index) => {
         const p = document.createElement('p');
         p.innerText = `${index + 1}위: ${user.name} (${user.wins}승)`;
-        if (index === 0) p.style.color = 'gold'; // 1등은 금색
+        if (index === 0) p.style.color = '#d4af37'; // 금색
         rankingDiv.appendChild(p);
     });
 });
 
-// [3] 방 기능 (만들기/입장/목록)
+// -----------------------------------------------------------
+// [3] 방 기능
+// -----------------------------------------------------------
 function createRoom() {
     const name = document.getElementById('create-room-name').value;
     const pass = document.getElementById('create-room-pass').value;
@@ -73,13 +116,15 @@ socket.on('roomListUpdate', (rooms) => {
     });
 });
 
+// -----------------------------------------------------------
 // [4] 게임 시작 및 진행
+// -----------------------------------------------------------
 socket.on('gameJoined', (data) => {
     myColor = data.color;
     document.getElementById('lobby-screen').classList.add('hidden');
     document.getElementById('game-screen').classList.remove('hidden');
     document.getElementById('room-title').innerText = `방: ${data.roomName}`;
-    chatMsgs.innerHTML = ''; // 채팅 초기화
+    chatMsgs.innerHTML = '';
     board.innerHTML = '';
     initBoard();
 });
@@ -107,21 +152,19 @@ socket.on('updateBoard', (data) => {
     const stone = document.createElement('div');
     stone.className = `stone ${data.color}`;
     cell.appendChild(stone);
-    
-    // 🔊 소리 재생 (에러 방지용 try-catch)
     try { soundStone.play(); } catch(e) {}
 });
 
-// [5] 타이머 및 상태 업데이트
+// -----------------------------------------------------------
+// [5] 타이머 / 상태 / 종료
+// -----------------------------------------------------------
 socket.on('status', (msg) => statusDiv.innerText = msg);
 socket.on('timerUpdate', (time) => {
     timerSpan.innerText = time;
-    timerSpan.style.color = time <= 5 ? 'red' : 'black'; // 5초 이하면 빨간색
+    timerSpan.style.color = time <= 5 ? 'red' : 'black';
 });
 
-// [6] 게임 종료
 socket.on('gameOver', (data) => {
-    // 🔊 승패 소리 재생
     if (data.winner === myName) {
         try { soundWin.play(); } catch(e) {}
         alert(`🎉 승리! ${data.msg}`);
@@ -129,13 +172,16 @@ socket.on('gameOver', (data) => {
         try { soundLose.play(); } catch(e) {}
         alert(`😭 패배... ${data.msg}`);
     }
-    location.reload();
+    // 게임 끝나고 새로고침되어도 -> window.onload가 실행되면서 자동 로그인됨!
+    location.reload(); 
 });
 
 socket.on('error', (msg) => alert(msg));
 function leaveRoom() { socket.emit('leaveRoom'); location.reload(); }
 
-// [7] 💬 채팅 기능
+// -----------------------------------------------------------
+// [6] 채팅
+// -----------------------------------------------------------
 function sendChat() {
     const input = document.getElementById('chat-input');
     const msg = input.value;
@@ -150,5 +196,5 @@ socket.on('chat', (data) => {
     div.className = 'chat-msg';
     div.innerHTML = `<b>${data.sender}:</b> ${data.msg}`;
     chatMsgs.appendChild(div);
-    chatMsgs.scrollTop = chatMsgs.scrollHeight; // 스크롤 맨 아래로
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
 });

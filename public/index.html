@@ -17,7 +17,11 @@
     </div>
 
     <div id="lobby-screen" class="screen hidden">
-        <h1>대기실</h1>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding: 0 20px;">
+            <h1>대기실</h1>
+            <button onclick="logout()" style="background:#888; color:white; font-size:12px; padding:5px 10px;">로그아웃</button>
+        </div>
+
         <div id="my-info">
             <span id="user-hello"></span>
             <br>
@@ -40,7 +44,7 @@
 
         <div class="room-section">
             <h3>📋 방 목록</h3>
-            <div class="ad-banner">[광고] 오목의 신이 되어보세요!</div>
+            <div class="ad-banner">[광고] 오목 한 판 어때요?</div>
             <div id="room-list">개설된 방이 없습니다.</div>
         </div>
     </div>
@@ -49,9 +53,7 @@
         <div class="game-header">
             <h2 id="room-title">방 제목</h2>
             <div id="player-list">대기중...</div>
-            
             <div id="timer-box">남은 시간: <span id="timer">30</span>초</div>
-            
             <button onclick="leaveRoom()" class="exit-btn">나가기</button>
         </div>
         
@@ -59,7 +61,6 @@
         
         <div id="game-container">
             <div id="board"></div>
-
             <div id="chat-container">
                 <div id="chat-messages"></div>
                 <div class="chat-input-box">
