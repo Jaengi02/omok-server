@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>오목 게임 - 로그인</title>
+    <style>
+        body { text-align: center; margin-top: 100px; background-color: #f0f0f0; }
+        input { padding: 10px; font-size: 16px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #e3c586; border: 1px solid #000; }
+    </style>
+</head>
+<body>
+    <h1>오목 게임 입장</h1>
+    <p>사용할 닉네임을 입력하세요</p>
+    <input type="text" id="username" placeholder="예: 홍길동" autofocus>
+    <button onclick="login()">게임 시작</button>
+
+    <script>
+        function login() {
+            const name = document.getElementById('username').value;
+            if (!name) {
+                alert("닉네임을 입력해주세요!");
+                return;
+            }
+            // 닉네임을 들고 게임 화면(game.html)으로 이동합니다.
+            window.location.href = `game.html?name=${encodeURIComponent(name)}`;
+        }
+    </script>
+</body>
+</html>

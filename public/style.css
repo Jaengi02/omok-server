@@ -1,0 +1,14 @@
+/* 파일명: style.css */
+body { text-align: center; background: #eee; }
+#board {
+    width: 600px; height: 600px; margin: 0 auto;
+    background: #e3c586; border: 2px solid black;
+    display: grid; grid-template-columns: repeat(15, 1fr);
+}
+.cell {
+    border: 1px solid #555; display: flex;
+    justify-content: center; align-items: center; cursor: pointer;
+}
+.stone { width: 80%; height: 80%; border-radius: 50%; }
+.black { background: black; }
+.white { background: white; border: 1px solid #ddd; }
