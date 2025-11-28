@@ -10,9 +10,7 @@ const io = socketIo(server);
 const PORT = process.env.PORT || 3000;
 app.use(express.static('public'));
 
-// ---------------------------------------------------------
 // 1. 유저 데이터 (users.json)
-// ---------------------------------------------------------
 const DB_FILE = 'users.json';
 let usersDB = {};
 
@@ -34,10 +32,9 @@ function saveDB() {
     }
 }
 
-// ---------------------------------------------------------
 // 2. 서버 메모리 데이터
-// ---------------------------------------------------------
 let rooms = {}; 
+let connectedUsers = {}; 
 
 io.on('connection', (socket) => {
     let myRoom = null;
@@ -56,16 +53,16 @@ io.on('connection', (socket) => {
 
         myName = name;
         socket.myName = name;
+        connectedUsers[socket.id] = name;
 
-        // 로그인 성공 시 정보 전송
         socket.emit('loginSuccess', { name, stats: usersDB[name] });
         socket.emit('roomListUpdate', getRoomList());
         socket.emit('rankingUpdate', getRanking());
+        io.emit('userListUpdate', Object.values(connectedUsers));
     });
 
-    // [2] 대기실 채팅 (만남의 광장)
+    // [2] 대기실 채팅
     socket.on('lobbyChat', (msg) => {
-        // 대기실에 있는 모든 사람에게 전송
         io.emit('lobbyChat', { sender: myName, msg: msg });
     });
 
@@ -80,8 +77,8 @@ io.on('connection', (socket) => {
             turn: 'black',
             timerId: null,
             timeLeft: 30,
-            isPlaying: false, // 게임 진행 중 여부
-            p2Ready: false    // 참여자 준비 여부
+            isPlaying: false,
+            p2Ready: false
         };
 
         joinRoomProcess(socket, roomName);
@@ -105,24 +102,14 @@ io.on('connection', (socket) => {
         myRoom = roomName;
         socket.join(roomName);
 
-        // 첫 번째 사람(방장) = 흑돌, 두 번째 사람(참여자) = 백돌
         const color = room.players.length === 0 ? 'black' : 'white';
         const isHost = room.players.length === 0; 
         
         room.players.push({ id: socket.id, name: socket.myName, color, isHost });
 
-        // 내 정보 전송
-        socket.emit('roomJoined', { 
-            roomName, color, isHost, players: room.players 
-        });
+        socket.emit('roomJoined', { roomName, color, isHost, players: room.players });
+        io.to(roomName).emit('updatePlayers', { players: room.players, p2Ready: room.p2Ready });
 
-        // 방 전체 인원 업데이트
-        io.to(roomName).emit('updatePlayers', { 
-            players: room.players, 
-            p2Ready: room.p2Ready 
-        });
-
-        // 상태 메시지
         if (room.players.length === 2) {
             io.to(roomName).emit('status', '참여자가 준비하면 게임을 시작할 수 있습니다.');
         } else {
@@ -130,30 +117,24 @@ io.on('connection', (socket) => {
         }
     }
 
-    // [5] 준비 완료 (참여자용)
+    // [5] 준비 완료
     socket.on('toggleReady', () => {
         if (!myRoom || !rooms[myRoom]) return;
         const room = rooms[myRoom];
-        
         const me = room.players.find(p => p.id === socket.id);
-        if (!me || me.isHost) return; // 방장은 준비 버튼 동작 안 함
+        if (!me || me.isHost) return;
 
         room.p2Ready = !room.p2Ready;
-        
-        io.to(myRoom).emit('updatePlayers', { 
-            players: room.players, 
-            p2Ready: room.p2Ready 
-        });
+        io.to(myRoom).emit('updatePlayers', { players: room.players, p2Ready: room.p2Ready });
         
         const msg = room.p2Ready ? '참여자가 준비 완료! 방장님 시작하세요.' : '참여자가 준비를 취소했습니다.';
         io.to(myRoom).emit('status', msg);
     });
 
-    // [6] 게임 시작 (방장용)
+    // [6] 게임 시작
     socket.on('startGame', () => {
         if (!myRoom || !rooms[myRoom]) return;
         const room = rooms[myRoom];
-        
         const me = room.players.find(p => p.id === socket.id);
         if (!me || !me.isHost) return;
 
@@ -169,8 +150,7 @@ io.on('connection', (socket) => {
     socket.on('placeStone', ({ x, y }) => {
         if (!myRoom || !rooms[myRoom]) return;
         const room = rooms[myRoom];
-
-        if (!room.isPlaying) return; // 게임 중일 때만
+        if (!room.isPlaying) return;
 
         const me = room.players.find(p => p.id === socket.id);
         if (!me || me.color !== room.turn || room.board[y][x] !== null) return;
@@ -189,7 +169,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // [8] 게임방 채팅
+    // [8] 채팅
     socket.on('chat', (msg) => {
         if (myRoom && rooms[myRoom]) {
             io.to(myRoom).emit('chat', { sender: myName, msg: msg });
@@ -201,15 +181,18 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => handleDisconnect());
 
     function handleDisconnect() {
+        if (socket.id in connectedUsers) {
+            delete connectedUsers[socket.id];
+            io.emit('userListUpdate', Object.values(connectedUsers));
+        }
+
         if (myRoom && rooms[myRoom]) {
             stopTimer(myRoom);
             const room = rooms[myRoom];
             
             if (room.isPlaying) {
-                // 게임 중 나가면 패배 처리
                 io.to(myRoom).emit('gameOver', { msg: `${myName}님이 나갔습니다. 상대방 승리!`, winner: 'opponent' });
             } else {
-                // 대기 중 나가면 방 폭파
                 io.to(myRoom).emit('error', '상대방이 나갔습니다. 로비로 이동합니다.');
                 io.to(myRoom).emit('forceLeave');
             }
@@ -220,7 +203,6 @@ io.on('connection', (socket) => {
     }
 });
 
-// 타이머
 function startTimer(roomName) {
     const room = rooms[roomName];
     if (!room) return;
@@ -259,12 +241,10 @@ function endGame(roomName, winnerName) {
     const winner = room.players.find(p => p.name === winnerName);
     const loser = room.players.find(p => p.name !== winnerName);
 
-    // 전적 업데이트 및 저장
     if (winner && usersDB[winner.name]) usersDB[winner.name].wins++;
     if (loser && usersDB[loser.name]) usersDB[loser.name].loses++;
     saveDB();
 
-    // ★ 중요: 전적 업데이트 신호를 클라이언트에게 보냄
     if(winner) io.to(winner.id).emit('statsUpdate', usersDB[winner.name]);
     if(loser) io.to(loser.id).emit('statsUpdate', usersDB[loser.name]);
 
