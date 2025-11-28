@@ -17,15 +17,23 @@
     </div>
 
     <div id="lobby-screen" class="screen hidden">
-        <div style="display:flex; justify-content:space-between; align-items:center; padding: 0 20px;">
-            <h1>대기실</h1>
-            <button onclick="logout()" style="background:#888; color:white; font-size:12px; padding:5px 10px;">로그아웃</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding: 0 10px;">
+            <h2>대기실</h2>
+            <button onclick="logout()" style="background:#888; color:white; font-size:12px; padding:5px;">로그아웃</button>
         </div>
 
         <div id="my-info">
-            <span id="user-hello"></span>
-            <br>
+            <span id="user-hello"></span> <br>
             <span id="user-stats" style="color:blue; font-weight:bold;"></span>
+        </div>
+
+        <div class="room-section" style="border: 2px solid #6c5ce7;">
+            <h3>💬 만남의 광장</h3>
+            <div id="lobby-chat-box" style="height:100px; overflow-y:auto; background:#fff; border:1px solid #ddd; margin-bottom:5px; padding:5px; text-align:left; font-size:13px;"></div>
+            <div style="display:flex;">
+                <input type="text" id="lobby-chat-input" placeholder="다함께 대화하기..." style="flex:1; margin:0;" onkeypress="if(event.keyCode==13) sendLobbyChat()">
+                <button onclick="sendLobbyChat()" style="margin:0; width:50px;">전송</button>
+            </div>
         </div>
 
         <div class="room-section ranking-section">
@@ -44,15 +52,21 @@
 
         <div class="room-section">
             <h3>📋 방 목록</h3>
-            <div class="ad-banner">[광고] 오목 한 판 어때요?</div>
-            <div id="room-list">개설된 방이 없습니다.</div>
+            <div id="room-list">방이 없습니다.</div>
         </div>
     </div>
 
     <div id="game-screen" class="screen hidden">
         <div class="game-header">
             <h2 id="room-title">방 제목</h2>
-            <div id="player-list">대기중...</div>
+            
+            <div id="player-list" style="margin: 10px 0; font-size: 16px;"></div>
+
+            <div id="game-controls" style="margin-bottom: 10px;">
+                <button id="btn-ready" onclick="toggleReady()" class="hidden" style="background:green; color:white;">준비하기</button>
+                <button id="btn-start" onclick="startGame()" class="hidden" style="background:blue; color:white;">게임 시작</button>
+            </div>
+
             <div id="timer-box">남은 시간: <span id="timer">30</span>초</div>
             <button onclick="leaveRoom()" class="exit-btn">나가기</button>
         </div>
@@ -64,7 +78,7 @@
             <div id="chat-container">
                 <div id="chat-messages"></div>
                 <div class="chat-input-box">
-                    <input type="text" id="chat-input" placeholder="메시지 입력..." onkeypress="if(event.keyCode==13) sendChat()">
+                    <input type="text" id="chat-input" placeholder="메시지..." onkeypress="if(event.keyCode==13) sendChat()">
                     <button onclick="sendChat()">전송</button>
                 </div>
             </div>

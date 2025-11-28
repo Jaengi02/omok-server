@@ -8,34 +8,32 @@ const rankingDiv = document.getElementById('ranking-list');
 const timerSpan = document.getElementById('timer');
 const chatMsgs = document.getElementById('chat-messages');
 
+// 게임 컨트롤 버튼
+const btnReady = document.getElementById('btn-ready');
+const btnStart = document.getElementById('btn-start');
+
 let myColor = null;
 let myName = null;
+let amIHost = false; // 내가 방장인가?
 
-// 🔊 효과음 (파일 없으면 에러 안 나게 처리)
 const soundStone = new Audio('stone.mp3');
 const soundWin = new Audio('win.mp3');
 const soundLose = new Audio('lose.mp3');
 
-// -----------------------------------------------------------
-// [0] 자동 로그인 (새로고침 해도 유지되게!)
-// -----------------------------------------------------------
+// [0] 자동 로그인
 window.onload = () => {
     const savedName = localStorage.getItem('omok-name');
     const savedPass = localStorage.getItem('omok-pass');
-
     if (savedName && savedPass) {
-        // 저장된 정보가 있으면 바로 로그인 시도
         socket.emit('login', { name: savedName, password: savedPass });
     }
 };
 
-// -----------------------------------------------------------
-// [1] 로그인 & 로그아웃
-// -----------------------------------------------------------
+// [1] 로그인 / 로그아웃
 function login() {
     const name = document.getElementById('username').value;
     const pass = document.getElementById('password').value;
-    if (!name || !pass) return alert('닉네임과 비밀번호를 입력하세요.');
+    if (!name || !pass) return alert('입력해주세요.');
     socket.emit('login', { name, password: pass });
 }
 
@@ -43,31 +41,23 @@ function logout() {
     if(confirm('로그아웃 하시겠습니까?')) {
         localStorage.removeItem('omok-name');
         localStorage.removeItem('omok-pass');
-        location.reload(); // 새로고침하면 로그인 화면으로 감
+        location.reload();
     }
 }
 
 socket.on('loginSuccess', ({ name, stats }) => {
     myName = name;
-    
-    // 성공하면 브라우저에 저장 (자동 로그인을 위해)
     localStorage.setItem('omok-name', document.getElementById('username').value || name);
-    // (보안상 좋지 않지만, 학생 프로젝트 수준에서는 비밀번호를 이렇게 저장해도 됩니다)
-    // 만약 자동로그인 시 비밀번호 값을 못 가져오는 경우를 대비해 저장된 값이 있으면 그걸 씀
-    const currentPass = document.getElementById('password').value;
-    if(currentPass) localStorage.setItem('omok-pass', currentPass);
+    const passVal = document.getElementById('password').value;
+    if(passVal) localStorage.setItem('omok-pass', passVal);
 
-    document.getElementById('user-hello').innerText = `안녕하세요, ${name}님!`;
-    const total = stats.wins + stats.loses;
-    const rate = total === 0 ? 0 : Math.round((stats.wins / total) * 100);
-    document.getElementById('user-stats').innerText = `전적: ${stats.wins}승 ${stats.loses}패 (${rate}%)`;
+    updateUserStats(stats); // 전적 표시 함수 분리
 
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.remove('hidden');
 });
 
 socket.on('loginFail', (msg) => {
-    // 자동 로그인 실패 시 (비번 바뀜 등) 저장된 정보 삭제
     localStorage.removeItem('omok-name');
     localStorage.removeItem('omok-pass');
     alert(msg);
@@ -75,26 +65,49 @@ socket.on('loginFail', (msg) => {
     document.getElementById('lobby-screen').classList.add('hidden');
 });
 
-// -----------------------------------------------------------
-// [2] 랭킹 업데이트
-// -----------------------------------------------------------
+// 전적 업데이트 함수 (게임 끝나고도 호출됨)
+function updateUserStats(stats) {
+    const total = stats.wins + stats.loses;
+    const rate = total === 0 ? 0 : Math.round((stats.wins / total) * 100);
+    document.getElementById('user-stats').innerText = `내 전적: ${stats.wins}승 ${stats.loses}패 (승률 ${rate}%)`;
+}
+
+// 실시간 전적 업데이트 받기
+socket.on('statsUpdate', (stats) => {
+    updateUserStats(stats);
+});
+
+// [2] 대기실 채팅
+function sendLobbyChat() {
+    const input = document.getElementById('lobby-chat-input');
+    if(input.value.trim()) {
+        socket.emit('lobbyChat', input.value);
+        input.value = '';
+    }
+}
+socket.on('lobbyChat', (data) => {
+    const box = document.getElementById('lobby-chat-box');
+    const p = document.createElement('div');
+    p.innerHTML = `<b>${data.sender}:</b> ${data.msg}`;
+    box.appendChild(p);
+    box.scrollTop = box.scrollHeight;
+});
+
+// [3] 랭킹 & 방목록
 socket.on('rankingUpdate', (rankList) => {
     rankingDiv.innerHTML = '';
     rankList.forEach((user, index) => {
         const p = document.createElement('p');
         p.innerText = `${index + 1}위: ${user.name} (${user.wins}승)`;
-        if (index === 0) p.style.color = '#d4af37'; // 금색
+        if (index === 0) p.style.color = '#d4af37';
         rankingDiv.appendChild(p);
     });
 });
 
-// -----------------------------------------------------------
-// [3] 방 기능
-// -----------------------------------------------------------
 function createRoom() {
     const name = document.getElementById('create-room-name').value;
     const pass = document.getElementById('create-room-pass').value;
-    if (!name) return alert('방 제목을 입력하세요.');
+    if (!name) return alert('방 제목 입력.');
     socket.emit('createRoom', { roomName: name, password: pass });
 }
 
@@ -105,7 +118,8 @@ socket.on('roomListUpdate', (rooms) => {
         const div = document.createElement('div');
         div.className = 'room-item';
         const lock = room.isLocked ? '🔒' : '';
-        div.innerHTML = `<span>${room.name} ${lock} (${room.count}/2)</span>`;
+        const status = room.isPlaying ? '(게임중)' : `(${room.count}/2)`;
+        div.innerHTML = `<span>${room.name} ${lock} ${status}</span>`;
         div.onclick = () => {
             if (room.count >= 2) return alert('꽉 찼습니다.');
             let pass = room.isLocked ? prompt('비밀번호:') : '';
@@ -116,19 +130,81 @@ socket.on('roomListUpdate', (rooms) => {
     });
 });
 
-// -----------------------------------------------------------
-// [4] 게임 시작 및 진행
-// -----------------------------------------------------------
-socket.on('gameJoined', (data) => {
+// [4] 게임 입장 & 준비/시작 로직
+socket.on('roomJoined', (data) => {
     myColor = data.color;
+    amIHost = data.isHost; // 내가 방장인지 저장
+
     document.getElementById('lobby-screen').classList.add('hidden');
     document.getElementById('game-screen').classList.remove('hidden');
     document.getElementById('room-title').innerText = `방: ${data.roomName}`;
+    
+    // 버튼 초기화
+    btnReady.classList.add('hidden');
+    btnStart.classList.add('hidden');
+    btnReady.innerText = "준비하기";
+    
+    // 방장은 시작 버튼, 참여자는 준비 버튼 표시
+    if (amIHost) {
+        btnStart.classList.remove('hidden');
+    } else {
+        btnReady.classList.remove('hidden');
+    }
+
     chatMsgs.innerHTML = '';
     board.innerHTML = '';
     initBoard();
 });
 
+// 플레이어 상태 업데이트
+socket.on('updatePlayers', (data) => {
+    const players = data.players;
+    const p2Ready = data.p2Ready;
+
+    const p1 = players.find(p => p.color === 'black');
+    const p2 = players.find(p => p.color === 'white');
+
+    let p1Text = p1 ? `⚫${p1.name}(방장)` : '⚫대기중';
+    let p2Text = p2 ? `⚪${p2.name}` : '⚪대기중';
+
+    // 준비 상태 표시
+    if (p2 && p2Ready) p2Text += " [준비완료!]";
+
+    document.getElementById('player-list').innerText = `${p1Text} vs ${p2Text}`;
+
+    // 내가 방장이면, 상대가 준비했을 때만 시작 버튼 활성화 (색상 변경 등)
+    if (amIHost) {
+        btnStart.disabled = !p2Ready; // 준비 안 하면 클릭 불가
+        btnStart.style.opacity = p2Ready ? 1 : 0.5;
+    }
+});
+
+function toggleReady() {
+    socket.emit('toggleReady');
+    // 버튼 텍스트 토글
+    if (btnReady.innerText === "준비하기") {
+        btnReady.innerText = "준비취소";
+        btnReady.style.background = "red";
+    } else {
+        btnReady.innerText = "준비하기";
+        btnReady.style.background = "green";
+    }
+}
+
+function startGame() {
+    socket.emit('startGame');
+}
+
+// 게임 시작 신호
+socket.on('gameStart', (msg) => {
+    alert(msg);
+    statusDiv.innerText = msg;
+    // 게임 시작되면 버튼들 숨김
+    btnReady.classList.add('hidden');
+    btnStart.classList.add('hidden');
+});
+
+// [5] 오목판 및 게임 로직
 function initBoard() {
     for (let y = 0; y < 15; y++) {
         for (let x = 0; x < 15; x++) {
@@ -140,13 +216,6 @@ function initBoard() {
     }
 }
 
-socket.on('updatePlayers', (players) => {
-    const p1 = players.find(p => p.color === 'black');
-    const p2 = players.find(p => p.color === 'white');
-    document.getElementById('player-list').innerText = 
-        `⚫${p1 ? p1.name : '...'} vs ⚪${p2 ? p2.name : '...'}`;
-});
-
 socket.on('updateBoard', (data) => {
     const cell = board.children[data.y * 15 + data.x];
     const stone = document.createElement('div');
@@ -155,9 +224,6 @@ socket.on('updateBoard', (data) => {
     try { soundStone.play(); } catch(e) {}
 });
 
-// -----------------------------------------------------------
-// [5] 타이머 / 상태 / 종료
-// -----------------------------------------------------------
 socket.on('status', (msg) => statusDiv.innerText = msg);
 socket.on('timerUpdate', (time) => {
     timerSpan.innerText = time;
@@ -172,25 +238,26 @@ socket.on('gameOver', (data) => {
         try { soundLose.play(); } catch(e) {}
         alert(`😭 패배... ${data.msg}`);
     }
-    // 게임 끝나고 새로고침되어도 -> window.onload가 실행되면서 자동 로그인됨!
+    // 게임 끝나면 로비로 이동 (자동 로그인됨)
     location.reload(); 
+});
+
+socket.on('forceLeave', () => {
+    alert("상대방이 나가서 대기실로 이동합니다.");
+    location.reload();
 });
 
 socket.on('error', (msg) => alert(msg));
 function leaveRoom() { socket.emit('leaveRoom'); location.reload(); }
 
-// -----------------------------------------------------------
-// [6] 채팅
-// -----------------------------------------------------------
+// [6] 게임방 채팅
 function sendChat() {
     const input = document.getElementById('chat-input');
-    const msg = input.value;
-    if (msg.trim()) {
-        socket.emit('chat', msg);
+    if (input.value.trim()) {
+        socket.emit('chat', input.value);
         input.value = '';
     }
 }
-
 socket.on('chat', (data) => {
     const div = document.createElement('div');
     div.className = 'chat-msg';
