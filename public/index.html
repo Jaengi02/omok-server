@@ -3,89 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>오목 온라인</title>
+    <title>오목 온라인 (19줄)</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="login-screen" class="screen">
+    <div id="login-screen" class="screen" style="max-width:400px; margin: 50px auto; padding:20px; background:white; border-radius:10px;">
         <h1>오목 온라인</h1>
         <p>닉네임과 비밀번호를 입력하세요.</p>
-        <input type="text" id="username" placeholder="닉네임" autofocus>
-        <input type="password" id="password" placeholder="비밀번호">
-        <br>
-        <button onclick="login()">접속하기</button>
+        <input type="text" id="username" placeholder="닉네임" autofocus style="width:90%">
+        <input type="password" id="password" placeholder="비밀번호" style="width:90%">
+        <br><br>
+        <button onclick="login()" style="width:95%">접속하기</button>
     </div>
 
-    <div id="lobby-screen" class="screen hidden">
-        <div style="display:flex; justify-content:space-between; align-items:center; padding: 0 10px;">
-            <h2>대기실</h2>
-            <button onclick="logout()" style="background:#888; color:white; font-size:12px; padding:5px;">로그아웃</button>
-        </div>
-
-        <div id="my-info">
-            <span id="user-hello"></span> <br>
-            <span id="user-stats" style="color:blue; font-weight:bold;"></span>
-        </div>
-
-        <div class="room-section" style="border: 1px solid #4caf50;">
-            <h3>🟢 현재 접속자 (<span id="online-count">0</span>명)</h3>
-            <div id="online-user-list" style="font-size:14px; color:#333; height: 60px; overflow-y: auto;">
-                </div>
-        </div>
-
-        <div class="room-section" style="border: 2px solid #6c5ce7;">
-            <h3>💬 만남의 광장</h3>
-            <div id="lobby-chat-box" style="height:100px; overflow-y:auto; background:#fff; border:1px solid #ddd; margin-bottom:5px; padding:5px; text-align:left; font-size:13px;"></div>
-            <div style="display:flex;">
-                <input type="text" id="lobby-chat-input" placeholder="다함께 대화하기..." style="flex:1; margin:0;" onkeypress="if(event.keyCode==13) sendLobbyChat()">
-                <button onclick="sendLobbyChat()" style="margin:0; width:50px;">전송</button>
-            </div>
-        </div>
-
-        <div class="room-section ranking-section">
-            <h3>🏆 명예의 전당 (TOP 5)</h3>
-            <div id="ranking-list">불러오는 중...</div>
-        </div>
-
-        <div class="room-section">
-            <h3>🏠 방 만들기</h3>
-            <input type="text" id="create-room-name" placeholder="방 제목">
-            <input type="text" id="create-room-pass" placeholder="비밀번호(선택)">
-            <button onclick="createRoom()">생성</button>
-        </div>
-
-        <hr>
-
-        <div class="room-section">
-            <h3>📋 방 목록</h3>
-            <div id="room-list">방이 없습니다.</div>
-        </div>
-    </div>
-
-    <div id="game-screen" class="screen hidden">
-        <div class="game-header">
-            <h2 id="room-title">방 제목</h2>
+    <div id="lobby-screen" class="hidden">
+        <div class="lobby-container">
             
-            <div id="player-list" style="margin: 10px 0; font-size: 16px;"></div>
+            <div class="lobby-main">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2 style="margin:0;">대기실</h2>
+                    <button onclick="logout()" style="background:#888; color:white; font-size:12px;">로그아웃</button>
+                </div>
 
-            <div id="game-controls" style="margin-bottom: 10px;">
-                <button id="btn-ready" onclick="toggleReady()" class="hidden" style="background:green; color:white;">준비하기</button>
-                <button id="btn-start" onclick="startGame()" class="hidden" style="background:blue; color:white;">게임 시작</button>
+                <div class="box-style">
+                    <h3>🏆 명예의 전당 (TOP 5)</h3>
+                    <div id="ranking-list">불러오는 중...</div>
+                </div>
+
+                <div class="box-style">
+                    <h3>🏠 방 만들기</h3>
+                    <input type="text" id="create-room-name" placeholder="방 제목">
+                    <input type="text" id="create-room-pass" placeholder="비밀번호(선택)">
+                    <button onclick="createRoom()">생성</button>
+                </div>
+
+                <div class="box-style" style="min-height: 200px;">
+                    <h3>📋 방 목록</h3>
+                    <div id="room-list">방이 없습니다.</div>
+                </div>
             </div>
 
-            <div id="timer-box">남은 시간: <span id="timer">30</span>초</div>
+            <div class="lobby-side">
+                <div class="box-style" style="background:#e8f5e9;">
+                    <h3 style="margin-top:0;">내 정보</h3>
+                    <span id="user-hello"></span><br>
+                    <span id="user-stats" style="color:blue; font-weight:bold;"></span>
+                </div>
+
+                <div class="box-style">
+                    <h3>🟢 접속자 (<span id="online-count">0</span>명)</h3>
+                    <div id="online-user-list" style="height:80px; overflow-y:auto; font-size:13px; color:#555;"></div>
+                </div>
+
+                <div class="box-style">
+                    <h3>💬 만남의 광장</h3>
+                    <div id="lobby-chat-box" style="height:200px; overflow-y:auto; background:#f9f9f9; border:1px solid #ddd; margin-bottom:5px; padding:5px; text-align:left; font-size:13px;"></div>
+                    <div style="display:flex;">
+                        <input type="text" id="lobby-chat-input" placeholder="대화하기..." style="flex:1; margin:0;" onkeypress="if(event.keyCode==13) sendLobbyChat()">
+                        <button onclick="sendLobbyChat()" style="margin:0;">전송</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div style="display:flex; justify-content:space-between; max-width:1000px; margin:0 auto;">
+            <h2 id="room-title">방 제목</h2>
             <button onclick="leaveRoom()" class="exit-btn">나가기</button>
         </div>
-        
-        <h3 id="status">대기중...</h3>
-        
-        <div id="game-container">
-            <div id="board"></div>
-            <div id="chat-container">
-                <div id="chat-messages"></div>
-                <div class="chat-input-box">
-                    <input type="text" id="chat-input" placeholder="메시지..." onkeypress="if(event.keyCode==13) sendChat()">
-                    <button onclick="sendChat()">전송</button>
+
+        <div id="game-layout">
+            <div style="text-align:center;">
+                <div id="player-list" style="font-size:18px; margin:10px 0; font-weight:bold;"></div>
+                
+                <div id="game-controls" style="margin-bottom:10px;">
+                    <button id="btn-ready" onclick="toggleReady()" class="hidden" style="background:green; color:white;">준비하기</button>
+                    <button id="btn-start" onclick="startGame()" class="hidden" style="background:blue; color:white;">게임 시작</button>
+                    <span id="spectator-msg" class="hidden" style="color:purple; font-weight:bold;">👀 관전 모드입니다</span>
+                </div>
+
+                <div id="status" style="margin-bottom:5px; color:#555;">대기중...</div>
+                <div id="timer-box">남은 시간: <span id="timer">30</span>초</div>
+
+                <div id="board"></div>
+            </div>
+
+            <div class="game-sidebar">
+                <div id="chat-container">
+                    <div id="chat-messages"></div>
+                    <div class="chat-input-box">
+                        <input type="text" id="chat-input" placeholder="메시지..." onkeypress="if(event.keyCode==13) sendChat()">
+                        <button onclick="sendChat()">전송</button>
+                    </div>
+                </div>
+
+                <div id="spectator-box">
+                    <div style="font-weight:bold; margin-bottom:5px;">👀 관전자 목록</div>
+                    <div id="spectator-list"></div>
                 </div>
             </div>
         </div>
