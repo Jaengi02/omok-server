@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>오목 온라인 (19줄)</title>
+    <title>오목 온라인</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,11 +18,13 @@
 
     <div id="lobby-screen" class="hidden">
         <div class="lobby-container">
-            
             <div class="lobby-main">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h2 style="margin:0;">대기실</h2>
-                    <button onclick="logout()" style="background:#888; color:white; font-size:12px;">로그아웃</button>
+                    <div>
+                        <button onclick="openShop()" style="background:#6c5ce7; color:white;">🛍️ 상점</button>
+                        <button onclick="logout()" style="background:#888; color:white;">로그아웃</button>
+                    </div>
                 </div>
 
                 <div class="box-style">
@@ -46,8 +48,9 @@
             <div class="lobby-side">
                 <div class="box-style" style="background:#e8f5e9;">
                     <h3 style="margin-top:0;">내 정보</h3>
-                    <span id="user-hello"></span><br>
-                    <span id="user-stats" style="color:blue; font-weight:bold;"></span>
+                    <div id="user-hello" style="font-size:18px;"></div>
+                    <div id="user-points" style="color:#d35400; font-weight:bold;">0 P</div>
+                    <div id="user-stats" style="color:blue;"></div>
                 </div>
 
                 <div class="box-style">
@@ -68,28 +71,27 @@
     </div>
 
     <div id="game-screen" class="hidden">
-        <div style="display:flex; justify-content:space-between; max-width:1000px; margin:0 auto;">
-            <h2 id="room-title">방 제목</h2>
-            <button onclick="leaveRoom()" class="exit-btn">나가기</button>
+        <div class="game-header-bar">
+            <h2 id="room-title" style="margin:0;">방 제목</h2>
+            <div id="player-list" style="font-weight:bold; font-size:16px;"></div>
+            
+            <div class="game-controls">
+                <button id="btn-ready" onclick="toggleReady()" class="hidden" style="background:green; color:white;">준비</button>
+                <button id="btn-start" onclick="startGame()" class="hidden" style="background:blue; color:white;">시작</button>
+                <span id="spectator-msg" class="hidden" style="color:purple; font-weight:bold;">관전중</span>
+                <button onclick="leaveRoom()" class="exit-btn">나가기</button>
+            </div>
         </div>
 
         <div id="game-layout">
-            <div style="text-align:center;">
-                <div id="player-list" style="font-size:18px; margin:10px 0; font-weight:bold;"></div>
-                
-                <div id="game-controls" style="margin-bottom:10px;">
-                    <button id="btn-ready" onclick="toggleReady()" class="hidden" style="background:green; color:white;">준비하기</button>
-                    <button id="btn-start" onclick="startGame()" class="hidden" style="background:blue; color:white;">게임 시작</button>
-                    <span id="spectator-msg" class="hidden" style="color:purple; font-weight:bold;">👀 관전 모드입니다</span>
-                </div>
-
-                <div id="status" style="margin-bottom:5px; color:#555;">대기중...</div>
-                <div id="timer-box">남은 시간: <span id="timer">30</span>초</div>
-
+            <div class="board-area">
+                <div id="status" style="margin-bottom:5px; color:#555; height:20px;">대기중...</div>
                 <div id="board"></div>
             </div>
 
             <div class="game-sidebar">
+                <div id="timer-box" style="font-size:20px; font-weight:bold; color:red; margin-bottom:10px;">30</div>
+                
                 <div id="chat-container">
                     <div id="chat-messages"></div>
                     <div class="chat-input-box">
@@ -99,10 +101,20 @@
                 </div>
 
                 <div id="spectator-box">
-                    <div style="font-weight:bold; margin-bottom:5px;">👀 관전자 목록</div>
+                    <div style="font-weight:bold; border-bottom:1px solid #eee;">👀 관전자</div>
                     <div id="spectator-list"></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div id="shop-modal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center;">
+        <div style="background:white; padding:20px; border-radius:10px; width:400px; text-align:center;">
+            <h2>🛍️ 바둑알 상점</h2>
+            <p>나의 포인트: <span id="shop-points" style="color:red; font-weight:bold;">0</span> P</p>
+            <div id="shop-items" style="display:flex; gap:10px; justify-content:center; margin:20px 0;">
+                </div>
+            <button onclick="closeShop()" style="background:#333; color:white;">닫기</button>
         </div>
     </div>
 

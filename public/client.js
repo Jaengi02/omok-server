@@ -21,12 +21,12 @@ let amIHost = false;
 let isSpectator = false;
 let lastStoneElement = null;
 
-// 🔊 Sound
+// [Sound]
 const soundStone = new Audio('stone.mp3');
 const soundWin = new Audio('win.mp3');
 const soundLose = new Audio('lose.mp3');
 
-// [0] Auto Login
+// [Auto Login]
 window.onload = () => {
     const savedName = localStorage.getItem('omok-name');
     const savedPass = localStorage.getItem('omok-pass');
@@ -42,19 +42,19 @@ function login() {
 
 function logout() {
     if(confirm('로그아웃?')) {
-        localStorage.removeItem('omok-name');
-        localStorage.removeItem('omok-pass');
+        localStorage.clear();
         location.reload();
     }
 }
 
-socket.on('loginSuccess', ({ name, stats }) => {
-    myName = name;
-    localStorage.setItem('omok-name', document.getElementById('username').value || name);
+// [Login Success]
+socket.on('loginSuccess', (data) => {
+    myName = data.name;
+    localStorage.setItem('omok-name', document.getElementById('username').value || myName);
     const passVal = document.getElementById('password').value;
     if(passVal) localStorage.setItem('omok-pass', passVal);
 
-    updateUserStats(stats);
+    updateUserInfo(data); // 정보 갱신
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.remove('hidden');
 });
@@ -66,18 +66,108 @@ socket.on('loginFail', (msg) => {
     document.getElementById('lobby-screen').classList.add('hidden');
 });
 
-function updateUserStats(stats) {
+// [User Info Update]
+function updateUserInfo(data) {
+    document.getElementById('user-hello').innerText = `안녕하세요, ${data.name}님!`;
+    document.getElementById('user-points').innerText = `${data.points} P`;
+    
+    const stats = data.stats || { wins: 0, loses: 0 };
     const total = stats.wins + stats.loses;
     const rate = total === 0 ? 0 : Math.round((stats.wins / total) * 100);
     document.getElementById('user-stats').innerText = `${stats.wins}승 ${stats.loses}패 (${rate}%)`;
-}
-socket.on('statsUpdate', updateUserStats);
 
+    // 상점용 데이터 저장
+    window.myItems = data.items || [];
+    window.myEquipped = data.equipped || 'default';
+}
+socket.on('infoUpdate', updateUserInfo); // 실시간 포인트/전적 갱신
+
+// [Shop Logic]
+function openShop() {
+    document.getElementById('shop-modal').classList.remove('hidden');
+    document.getElementById('shop-modal').style.display = 'flex';
+    document.getElementById('shop-points').innerText = document.getElementById('user-points').innerText.replace(' P','');
+    renderShopItems();
+}
+function closeShop() {
+    document.getElementById('shop-modal').classList.add('hidden');
+    document.getElementById('shop-modal').style.display = 'none';
+}
+
+function renderShopItems() {
+    const items = [
+        { id: 'default', name: '기본돌', price: 0, color: '#333' },
+        { id: 'gold', name: '황금돌', price: 500, color: 'gold' },
+        { id: 'diamond', name: '다이아', price: 1000, color: 'cyan' },
+        { id: 'ruby', name: '루비', price: 2000, color: 'red' }
+    ];
+    
+    const container = document.getElementById('shop-items');
+    container.innerHTML = '';
+
+    items.forEach(item => {
+        const div = document.createElement('div');
+        div.style.border = '1px solid #ddd';
+        div.style.padding = '10px';
+        div.style.borderRadius = '5px';
+        div.style.width = '80px';
+
+        // 돌 미리보기
+        const preview = document.createElement('div');
+        preview.style.width = '30px'; preview.style.height = '30px';
+        preview.style.borderRadius = '50%'; preview.style.margin = '0 auto 5px auto';
+        preview.style.backgroundColor = item.color;
+        if(item.id === 'gold') preview.style.border = '2px solid orange';
+
+        const name = document.createElement('div');
+        name.innerText = item.name;
+        const price = document.createElement('div');
+        price.innerText = `${item.price}P`;
+        
+        const btn = document.createElement('button');
+        btn.style.marginTop = '5px';
+        btn.style.fontSize = '12px';
+        btn.style.padding = '5px';
+
+        if (window.myItems.includes(item.id)) {
+            if (window.myEquipped === item.id) {
+                btn.innerText = '장착중';
+                btn.disabled = true;
+                btn.style.background = '#aaa';
+            } else {
+                btn.innerText = '장착';
+                btn.onclick = () => socket.emit('equipItem', item.id);
+            }
+        } else {
+            btn.innerText = '구매';
+            btn.onclick = () => {
+                if(confirm(`${item.price}포인트를 사용하여 구매하시겠습니까?`)) {
+                    socket.emit('buyItem', item.id);
+                }
+            };
+        }
+
+        div.append(preview, name, price, btn);
+        container.appendChild(div);
+    });
+}
+
+socket.on('shopUpdate', (data) => {
+    // 구매/장착 후 데이터 갱신
+    document.getElementById('user-points').innerText = `${data.points} P`;
+    document.getElementById('shop-points').innerText = data.points;
+    window.myItems = data.items;
+    window.myEquipped = data.equipped;
+    renderShopItems(); // 상점 화면 다시 그리기
+});
+socket.on('alert', (msg) => alert(msg));
+
+
+// [Basic Features]
 socket.on('userListUpdate', (userList) => {
     onlineCountSpan.innerText = userList.length;
     onlineListDiv.innerText = userList.join(', ');
 });
-
 function sendLobbyChat() {
     const input = document.getElementById('lobby-chat-input');
     if(input.value.trim()) { socket.emit('lobbyChat', input.value); input.value = ''; }
@@ -89,7 +179,6 @@ socket.on('lobbyChat', (data) => {
     box.appendChild(p);
     box.scrollTop = box.scrollHeight;
 });
-
 socket.on('rankingUpdate', (rankList) => {
     rankingDiv.innerHTML = '';
     rankList.forEach((user, index) => {
@@ -99,14 +188,12 @@ socket.on('rankingUpdate', (rankList) => {
         rankingDiv.appendChild(p);
     });
 });
-
 function createRoom() {
     const name = document.getElementById('create-room-name').value;
     const pass = document.getElementById('create-room-pass').value;
     if (!name) return alert('방 제목?');
     socket.emit('createRoom', { roomName: name, password: pass });
 }
-
 socket.on('roomListUpdate', (rooms) => {
     roomListDiv.innerHTML = '';
     if (rooms.length === 0) { roomListDiv.innerHTML = '<p>방이 없습니다.</p>'; return; }
@@ -115,8 +202,7 @@ socket.on('roomListUpdate', (rooms) => {
         div.className = 'room-item';
         const lock = room.isLocked ? '🔒' : '';
         const statusClass = room.isPlaying ? 'room-status-playing' : 'room-status-waiting';
-        const statusText = room.isPlaying ? '게임중 (관전가능)' : `대기중 (${room.count}/2)`;
-        
+        const statusText = room.isPlaying ? '게임중' : `대기중 (${room.count}/2)`;
         div.innerHTML = `<span>${room.name} ${lock}</span> <span class="${statusClass}">${statusText}</span>`;
         div.onclick = () => {
             let pass = room.isLocked ? prompt('비밀번호:') : '';
@@ -127,7 +213,7 @@ socket.on('roomListUpdate', (rooms) => {
     });
 });
 
-// [게임 입장 & 관전 처리]
+// [Game Logic]
 socket.on('roomJoined', (data) => {
     myColor = data.color;
     amIHost = data.isHost;
@@ -137,39 +223,33 @@ socket.on('roomJoined', (data) => {
     document.getElementById('game-screen').classList.remove('hidden');
     document.getElementById('room-title').innerText = `방: ${data.roomName}`;
     
-    // 버튼 초기화
     btnReady.classList.add('hidden');
     btnStart.classList.add('hidden');
     spectatorMsg.classList.add('hidden');
 
-    if (isSpectator) {
-        spectatorMsg.classList.remove('hidden');
-    } else {
-        btnReady.innerText = "준비하기";
+    if (isSpectator) spectatorMsg.classList.remove('hidden');
+    else {
+        btnReady.innerText = "준비";
         if (amIHost) btnStart.classList.remove('hidden');
         else btnReady.classList.remove('hidden');
     }
 
     chatMsgs.innerHTML = '';
-    initBoard(data.board); // 기존에 놓인 돌이 있으면 그림
+    initBoard(data.board);
 });
 
 socket.on('updateRoomInfo', (data) => {
     const { players, spectators, p2Ready } = data;
-    
-    // 플레이어 표시
     const p1 = players.find(p => p.color === 'black');
     const p2 = players.find(p => p.color === 'white');
     let p1Text = p1 ? `⚫${p1.name}` : '⚫?';
     let p2Text = p2 ? `⚪${p2.name}` : '⚪?';
-    if (p2 && p2Ready) p2Text += " [준비됨]";
+    if (p2 && p2Ready) p2Text += " [준비완료]";
     document.getElementById('player-list').innerText = `${p1Text} vs ${p2Text}`;
 
-    // 관전자 표시
     spectatorListDiv.innerHTML = '';
     spectators.forEach(s => {
         const div = document.createElement('div');
-        div.className = 'spectator-item';
         div.innerText = `👤 ${s.name}`;
         spectatorListDiv.appendChild(div);
     });
@@ -184,32 +264,30 @@ function toggleReady() { socket.emit('toggleReady'); }
 function startGame() { socket.emit('startGame'); }
 
 socket.on('gameStart', (msg) => {
-    // 🔊 소리 재생 후 알림 (alert가 소리 끊는거 방지)
     try { soundWin.play(); } catch(e){} 
     setTimeout(() => { alert(msg); statusDiv.innerText = msg; }, 100);
-    
     btnReady.classList.add('hidden');
     btnStart.classList.add('hidden');
 });
 
-// [19x19 보드 초기화]
 function initBoard(currentBoardData) {
     board.innerHTML = '';
     lastStoneElement = null;
-    
-    // 19 x 19 반복
     for (let y = 0; y < 19; y++) {
         for (let x = 0; x < 19; x++) {
             const cell = document.createElement('div');
             cell.className = 'cell';
-            // 관전자는 클릭해도 소용없지만 이벤트는 달아둠 (서버에서 막음)
             cell.onclick = () => { if(!isSpectator && myColor) socket.emit('placeStone', { x, y }); };
             board.appendChild(cell);
 
-            // 이미 놓인 돌이 있다면 그리기 (관전자용)
             if (currentBoardData && currentBoardData[y][x]) {
+                // stoneValue = "black:gold" -> split -> color="black", skin="gold"
+                const parts = currentBoardData[y][x].split(':');
+                const color = parts[0];
+                const skin = parts[1] || 'default';
+                
                 const stone = document.createElement('div');
-                stone.className = `stone ${currentBoardData[y][x]}`;
+                stone.className = `stone ${color} ${skin}`; // 스킨 클래스 추가
                 cell.appendChild(stone);
             }
         }
@@ -217,10 +295,11 @@ function initBoard(currentBoardData) {
 }
 
 socket.on('updateBoard', (data) => {
-    const index = data.y * 19 + data.x; // 19줄이라 인덱스 계산 변경
+    const index = data.y * 19 + data.x;
     const cell = board.children[index];
     const stone = document.createElement('div');
-    stone.className = `stone ${data.color}`;
+    // 스킨 적용 (data.skin)
+    stone.className = `stone ${data.color} ${data.skin || 'default'}`;
     
     if (lastStoneElement) lastStoneElement.classList.remove('last-move');
     stone.classList.add('last-move');
@@ -237,20 +316,13 @@ socket.on('timerUpdate', (time) => {
 });
 
 socket.on('gameOver', (data) => {
-    // 🔊 소리 재생 후 알림
-    if (data.winner === myName) {
-        try { soundWin.play(); } catch(e){}
-    } else {
-        try { soundLose.play(); } catch(e){}
-    }
+    if (data.winner === myName) try { soundWin.play(); } catch(e){}
+    else try { soundLose.play(); } catch(e){}
     
-    setTimeout(() => {
-        alert(`게임 종료! ${data.msg}`);
-        location.reload(); 
-    }, 200); // 0.2초 딜레이
+    setTimeout(() => { alert(`게임 종료! ${data.msg}`); location.reload(); }, 200);
 });
 
-socket.on('forceLeave', () => { alert("방이 사라졌습니다."); location.reload(); });
+socket.on('forceLeave', () => { alert("방 사라짐"); location.reload(); });
 socket.on('error', (msg) => alert(msg));
 function leaveRoom() { socket.emit('leaveRoom'); location.reload(); }
 
