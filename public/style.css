@@ -1,7 +1,19 @@
-/* 파일명: style.css */
-body { text-align: center; background: #eee; }
+/* public/style.css */
+body { text-align: center; background: #f0f0f0; font-family: sans-serif; }
+
+/* 화면 전환용 */
+.screen { display: block; }
+.hidden { display: none !important; }
+
+/* 버튼 디자인 */
+button {
+    padding: 10px 20px; font-size: 16px; cursor: pointer;
+    background: #e3c586; border: 1px solid #000; margin-top: 10px;
+}
+
+/* 오목판 디자인 (기존과 동일) */
 #board {
-    width: 600px; height: 600px; margin: 0 auto;
+    width: 600px; height: 600px; margin: 20px auto;
     background: #e3c586; border: 2px solid black;
     display: grid; grid-template-columns: repeat(15, 1fr);
 }
@@ -9,6 +21,6 @@ body { text-align: center; background: #eee; }
     border: 1px solid #555; display: flex;
     justify-content: center; align-items: center; cursor: pointer;
 }
-.stone { width: 80%; height: 80%; border-radius: 50%; }
+.stone { width: 80%; height: 80%; border-radius: 50%; box-shadow: 2px 2px 2px rgba(0,0,0,0.3); }
 .black { background: black; }
 .white { background: white; border: 1px solid #ddd; }

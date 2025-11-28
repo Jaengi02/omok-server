@@ -2,29 +2,31 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>오목 게임 - 로그인</title>
-    <style>
-        body { text-align: center; margin-top: 100px; background-color: #f0f0f0; }
-        input { padding: 10px; font-size: 16px; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #e3c586; border: 1px solid #000; }
-    </style>
+    <title>오목 온라인</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>오목 게임 입장</h1>
-    <p>사용할 닉네임을 입력하세요</p>
-    <input type="text" id="username" placeholder="예: 홍길동" autofocus>
-    <button onclick="login()">게임 시작</button>
+    <div id="login-screen" class="screen">
+        <h1>오목 온라인</h1>
+        <input type="text" id="username" placeholder="닉네임 입력" autofocus>
+        <button onclick="joinLobby()">입장하기</button>
+    </div>
 
-    <script>
-        function login() {
-            const name = document.getElementById('username').value;
-            if (!name) {
-                alert("닉네임을 입력해주세요!");
-                return;
-            }
-            // 닉네임을 들고 게임 화면(game.html)으로 이동합니다.
-            window.location.href = `game.html?name=${encodeURIComponent(name)}`;
-        }
-    </script>
+    <div id="lobby-screen" class="screen hidden">
+        <h1>대기실</h1>
+        <p id="user-hello"></p>
+        <p>현재 접속자 수: <span id="user-count">0</span>명</p>
+        <button id="start-btn" onclick="requestGame()">게임 찾기 🔍</button>
+        <p id="waiting-msg" class="hidden">상대방을 찾는 중입니다...</p>
+    </div>
+
+    <div id="game-screen" class="screen hidden">
+        <h1>오목 대결</h1>
+        <h3 id="status">상대방을 기다리는 중...</h3>
+        <div id="board"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
 </body>
 </html>

@@ -1,65 +1,90 @@
-// 파일명: public/client.js
+// public/client.js
 const socket = io();
 const board = document.getElementById('board');
 const statusDiv = document.getElementById('status');
+
+// 화면 요소들
+const loginScreen = document.getElementById('login-screen');
+const lobbyScreen = document.getElementById('lobby-screen');
+const gameScreen = document.getElementById('game-screen');
+const startBtn = document.getElementById('start-btn');
+const waitingMsg = document.getElementById('waiting-msg');
+
 let myColor = null;
 
-// [추가된 부분] 주소창(URL)에서 닉네임 가져오기
-const params = new URLSearchParams(window.location.search);
-const myName = params.get('name') || '이름없음';
-
-// 서버에 접속하자마자 내 이름 알려주기
-socket.emit('join', myName);
-
-// 15x15 판 그리기 (기존과 동일)
-for (let y = 0; y < 15; y++) {
-    for (let x = 0; x < 15; x++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.onclick = () => {
-            if (myColor && !cell.hasChildNodes()) socket.emit('placeStone', { x, y });
-        };
-        board.appendChild(cell);
-    }
-}
-
-// 초기 설정 (서버가 이름을 포함해서 정보를 줌)
-socket.on('init', (data) => {
-    myColor = data.color;
-    // 내 돌 색깔과 이름 표시
-    statusDiv.innerText = `환영합니다, ${myName}님! 당신은 ${myColor === 'black' ? '흑돌(⚫)' : '백돌(⚪)'}입니다.`;
+// [1] 로그인 -> 로비 이동
+function joinLobby() {
+    const name = document.getElementById('username').value;
+    if (!name) return alert("닉네임을 입력하세요");
     
-    data.board.forEach((row, y) => row.forEach((c, x) => { if(c) draw(x, y, c); }));
+    socket.emit('joinLobby', name);
+    document.getElementById('user-hello').innerText = `반갑습니다, ${name}님!`;
+    
+    loginScreen.classList.add('hidden'); // 로그인 숨김
+    lobbyScreen.classList.remove('hidden'); // 로비 보임
+}
+
+// [2] 게임 찾기 버튼 클릭
+function requestGame() {
+    socket.emit('requestGame');
+}
+
+// [3] 서버 응답 처리
+// 대기 중일 때
+socket.on('waiting', () => {
+    startBtn.classList.add('hidden');
+    waitingMsg.classList.remove('hidden');
 });
 
-// 게임 시작 알림 (상대방 이름도 표시)
-socket.on('ready', (msg) => statusDiv.innerText = msg);
+// 게임 매칭 성공! (게임 화면으로 이동)
+socket.on('gameStart', (data) => {
+    myColor = data.color;
+    // 로비 숨기고 게임 화면 보이기
+    lobbyScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
 
-socket.on('updateBoard', (data) => draw(data.x, data.y, data.color));
-
-// 턴 변경 알림 (이름으로 표시)
-socket.on('turnChange', (data) => {
-    if (myColor === data.currentTurn) {
-        statusDiv.innerText = `${data.message} (당신의 차례!)`;
-        statusDiv.style.color = "blue";
-    } else {
-        statusDiv.innerText = data.message;
-        statusDiv.style.color = "black";
-    }
+    // 오목판 초기화
+    board.innerHTML = ''; 
+    initBoard();
+    
+    const opponent = data.opponentName;
+    const myRole = myColor === 'black' ? '흑돌(⚫)' : '백돌(⚪)';
+    statusDiv.innerText = `VS ${opponent} | 당신은 ${myRole}입니다.`;
 });
 
-socket.on('gameOver', (msg) => alert(msg));
-socket.on('reset', (msg) => {
-    alert(msg);
-    document.querySelectorAll('.cell').forEach(c => c.innerHTML = '');
-});
-socket.on('full', (msg) => { alert(msg); window.location.href = '/'; }); // 꽉 차면 로그인으로 튕김
-
-function draw(x, y, c) {
-    const cell = board.children[y * 15 + x];
-    if (!cell.hasChildNodes()) {
-        const stone = document.createElement('div');
-        stone.className = `stone ${c}`;
-        cell.appendChild(stone);
+// 오목판 그리기 함수
+function initBoard() {
+    for (let y = 0; y < 15; y++) {
+        for (let x = 0; x < 15; x++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.onclick = () => {
+                if (myColor) socket.emit('placeStone', { x, y });
+            };
+            board.appendChild(cell);
+        }
     }
 }
+
+// 게임 진행 로직 (기존과 동일)
+socket.on('updateBoard', ({ x, y, color }) => {
+    const cell = board.children[y * 15 + x];
+    const stone = document.createElement('div');
+    stone.className = `stone ${color}`;
+    cell.appendChild(stone);
+});
+
+socket.on('turnChange', ({ turn }) => {
+    const isMyTurn = myColor === turn;
+    statusDiv.style.color = isMyTurn ? 'blue' : 'black';
+    statusDiv.innerText = isMyTurn ? "당신의 차례입니다!" : "상대방 생각 중...";
+});
+
+socket.on('gameOver', (msg) => {
+    alert(msg);
+    location.reload(); // 확인 누르면 새로고침 (로비로 돌아감)
+});
+
+socket.on('userCount', (count) => {
+    document.getElementById('user-count').innerText = count;
+});
