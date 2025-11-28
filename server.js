@@ -8,107 +8,124 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 const PORT = process.env.PORT || 3000;
-
 app.use(express.static('public'));
 
-// 전체 게임 상태 관리
-// rooms = { 'roomID': { board: [], turn: 'black', players: [socketId1, socketId2] } }
+// 방 목록 (Key: 방제목, Value: 방 정보)
 let rooms = {}; 
-let waitingPlayer = null; // 대기 중인 사람 (한 명만 저장)
 
 io.on('connection', (socket) => {
-    console.log('새로운 접속:', socket.id);
-    let myRoomId = null;
+    let myRoom = null;
     let myName = null;
 
-    // 1. 로비 입장 (닉네임 저장)
-    socket.on('joinLobby', (name) => {
+    // 1. 로비 입장
+    socket.on('login', (name) => {
         myName = name;
-        io.emit('userCount', io.engine.clientsCount); // 전체 접속자 수 알림
+        socket.myName = name;
     });
 
-    // 2. 게임 매칭 요청
-    socket.on('requestGame', () => {
-        if (waitingPlayer) {
-            // 대기자가 있으면 -> 매칭 성공!
-            const opponent = waitingPlayer;
-            waitingPlayer = null; // 대기열 비움
-
-            // 방 ID 생성 (두 사람의 ID를 합침)
-            const roomId = socket.id + '#' + opponent.id;
-            
-            // 두 사람을 방에 넣음
-            opponent.join(roomId);
-            socket.join(roomId);
-
-            // 방 데이터 생성 (각 방마다 따로 바둑판을 가짐)
-            rooms[roomId] = {
-                board: Array(15).fill().map(() => Array(15).fill(null)),
-                turn: 'black',
-                players: [opponent.id, socket.id], // [흑돌, 백돌]
-                names: [opponent.myName, myName]
-            };
-
-            // 게임 시작 알림 (흑돌, 백돌 지정)
-            io.to(opponent.id).emit('gameStart', { color: 'black', roomId: roomId, opponentName: myName });
-            io.to(socket.id).emit('gameStart', { color: 'white', roomId: roomId, opponentName: opponent.myName });
-            
-            // 상대방에게 방 ID 저장 (나중에 쓰기 위함)
-            opponent.myRoomId = roomId;
-            socket.myRoomId = roomId; // socket 객체에 직접 저장
-
-        } else {
-            // 대기자가 없으면 -> 내가 대기자가 됨
-            waitingPlayer = socket;
-            socket.myName = myName; // 소켓에 이름 저장해둠
-            socket.emit('waiting');
+    // 2. 방 만들기
+    socket.on('createRoom', ({ roomName, password }) => {
+        if (rooms[roomName]) {
+            socket.emit('error', '이미 존재하는 방 이름입니다.');
+            return;
         }
+
+        // 방 생성
+        rooms[roomName] = {
+            password: password, // 비밀번호 저장
+            players: [], // 참여자 목록 {id, name, color}
+            board: Array(15).fill().map(() => Array(15).fill(null)),
+            turn: 'black'
+        };
+
+        joinRoomProcess(socket, roomName);
     });
 
-    // 3. 돌 두기
+    // 3. 방 입장하기
+    socket.on('joinRoom', ({ roomName, password }) => {
+        const room = rooms[roomName];
+
+        if (!room) {
+            socket.emit('error', '존재하지 않는 방입니다.');
+            return;
+        }
+        if (room.players.length >= 2) {
+            socket.emit('error', '방이 꽉 찼습니다.');
+            return;
+        }
+        if (room.password && room.password !== password) {
+            socket.emit('error', '비밀번호가 틀렸습니다.');
+            return;
+        }
+
+        joinRoomProcess(socket, roomName);
+    });
+
+    // [공통] 방 입장 처리 함수
+    function joinRoomProcess(socket, roomName) {
+        const room = rooms[roomName];
+        myRoom = roomName;
+        socket.join(roomName);
+
+        // 색깔 결정 (첫 번째면 흑, 두 번째면 백)
+        const color = room.players.length === 0 ? 'black' : 'white';
+        room.players.push({ id: socket.id, name: socket.myName, color: color });
+
+        // 클라이언트에게 게임 시작 알림 (방 정보, 내 색깔)
+        socket.emit('gameJoined', { 
+            roomName: roomName, 
+            color: color, 
+            players: room.players 
+        });
+
+        // 방에 있는 모든 사람에게 "참여자 목록" 업데이트
+        io.to(roomName).emit('updatePlayers', room.players);
+
+        // 2명이 모이면 알림
+        if (room.players.length === 2) {
+            io.to(roomName).emit('status', `게임 시작! ${room.players[0].name}(흑돌)님의 차례`);
+        } else {
+            socket.emit('status', '상대방을 기다리는 중...');
+        }
+    }
+
+    // 4. 돌 두기
     socket.on('placeStone', ({ x, y }) => {
-        // 내 방 찾기
-        const roomId = socket.myRoomId;
-        const room = rooms[roomId];
-
-        if (!room) return; // 방이 없으면 무시
-
-        const myColor = room.players[0] === socket.id ? 'black' : 'white';
+        if (!myRoom || !rooms[myRoom]) return;
+        const room = rooms[myRoom];
         
-        // 내 턴인지, 빈 칸인지 확인
-        if (room.turn !== myColor || room.board[y][x] !== null) return;
+        // 내 턴인지 확인
+        const me = room.players.find(p => p.id === socket.id);
+        if (!me || me.color !== room.turn || room.board[y][x] !== null || room.players.length < 2) return;
 
-        // 돌 두기 & 턴 넘기기
-        room.board[y][x] = myColor;
+        room.board[y][x] = me.color;
         room.turn = room.turn === 'black' ? 'white' : 'black';
 
-        // 방에 있는 사람들에게만 알림! (io.to(roomId))
-        io.to(roomId).emit('updateBoard', { x, y, color: myColor });
+        // 돌 업데이트 & 턴 알림
+        io.to(myRoom).emit('updateBoard', { x, y, color: me.color });
         
-        // 승리 체크
-        if (checkWin(room.board, x, y, myColor)) {
-            io.to(roomId).emit('gameOver', `${myColor === 'black' ? '흑돌' : '백돌'} 승리!`);
-            delete rooms[roomId]; // 게임 끝났으니 방 삭제
-        } else {
-            io.to(roomId).emit('turnChange', { turn: room.turn });
+        const nextPlayer = room.players.find(p => p.color === room.turn);
+        io.to(myRoom).emit('status', `${nextPlayer.name}(${room.turn === 'black'?'흑':'백'})님의 차례`);
+
+        if (checkWin(room.board, x, y, me.color)) {
+            io.to(myRoom).emit('gameOver', `${me.name} 승리!`);
+            delete rooms[myRoom]; // 게임 끝 방 삭제
         }
     });
 
-    // 4. 접속 종료 처리
-    socket.on('disconnect', () => {
-        if (waitingPlayer === socket) {
-            waitingPlayer = null; // 대기 중 나감
+    // 5. 나가기
+    socket.on('disconnect', () => handleDisconnect());
+    socket.on('leaveRoom', () => handleDisconnect());
+
+    function handleDisconnect() {
+        if (myRoom && rooms[myRoom]) {
+            io.to(myRoom).emit('gameOver', `${myName}님이 나갔습니다. 게임 종료.`);
+            io.to(myRoom).emit('leaveRoomSuccess'); // 클라이언트 화면 전환용
+            delete rooms[myRoom];
         }
-        // 게임 중 나감
-        if (socket.myRoomId && rooms[socket.myRoomId]) {
-            io.to(socket.myRoomId).emit('gameOver', '상대방이 나갔습니다. 승리!');
-            delete rooms[socket.myRoomId];
-        }
-        io.emit('userCount', io.engine.clientsCount);
-    });
+    }
 });
 
-// 승리 로직 (board를 인자로 받아야 함)
 function checkWin(board, x, y, color) {
     const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
     for (let [dx, dy] of directions) {
@@ -124,4 +141,4 @@ function checkWin(board, x, y, color) {
     return false;
 }
 
-server.listen(PORT, () => console.log(`서버 실행 중: ${PORT}`));
+server.listen(PORT, () => console.log(`서버 실행: ${PORT}`));
