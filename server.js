@@ -67,4 +67,29 @@ io.on('connection', (socket) => {
             socket.emit('loginSuccess', { name, stats: { wins: user.wins, loses: user.loses } });
             socket.emit('roomListUpdate', getRoomList());
             
-            // 랭킹
+            // 랭킹은 DB에서 가져와서 보냄
+            const ranking = await getRankingDB();
+            socket.emit('rankingUpdate', ranking);
+            
+            io.emit('userListUpdate', Object.values(connectedUsers));
+
+        } catch (err) {
+            console.error(err);
+            socket.emit('loginFail', '로그인 중 오류가 발생했습니다.');
+        }
+    });
+
+    // [2] 대기실 채팅
+    socket.on('lobbyChat', (msg) => {
+        io.emit('lobbyChat', { sender: myName, msg: msg });
+    });
+
+    // [3] 방 만들기
+    socket.on('createRoom', ({ roomName, password }) => {
+        if (rooms[roomName]) return socket.emit('error', '이미 존재하는 방입니다.');
+
+        rooms[roomName] = {
+            password,
+            players: [],
+            spectators: [],
+            board: Array(BOARD_SIZE).fill().map(() =>
