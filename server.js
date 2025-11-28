@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true },
     wins: { type: Number, default: 0 },
     loses: { type: Number, default: 0 },
-    points: { type: Number, default: 1000 }, // 가입 보너스 1000원
+    points: { type: Number, default: 0 }, // 가입 보너스 0원
     items: { type: [String], default: ['default'] }, // 보유 아이템
     equipped: { type: String, default: 'default' }   // 장착중인 스킨
 });
