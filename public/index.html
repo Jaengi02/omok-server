@@ -2,48 +2,72 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>오목 온라인</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="login-screen" class="screen">
         <h1>오목 온라인</h1>
-        <input type="text" id="username" placeholder="닉네임 입력" autofocus>
-        <button onclick="login()">접속</button>
+        <p>닉네임과 비밀번호를 입력하세요.</p>
+        <input type="text" id="username" placeholder="닉네임" autofocus>
+        <input type="password" id="password" placeholder="비밀번호">
+        <br>
+        <button onclick="login()">접속하기</button>
     </div>
 
     <div id="lobby-screen" class="screen hidden">
         <h1>대기실</h1>
         <div id="my-info">
             <span id="user-hello"></span>
+            <br>
             <span id="user-stats" style="color:blue; font-weight:bold;"></span>
         </div>
-        
+
+        <div class="room-section ranking-section">
+            <h3>🏆 명예의 전당 (TOP 5)</h3>
+            <div id="ranking-list">불러오는 중...</div>
+        </div>
+
         <div class="room-section">
             <h3>🏠 방 만들기</h3>
             <input type="text" id="create-room-name" placeholder="방 제목">
-            <input type="text" id="create-room-pass" placeholder="비밀번호 (선택)">
+            <input type="text" id="create-room-pass" placeholder="비밀번호(선택)">
             <button onclick="createRoom()">생성</button>
         </div>
 
         <hr>
 
         <div class="room-section">
-            <h3>📋 방 목록 (클릭하여 입장)</h3>
-            <div id="room-list">
-                <p>개설된 방이 없습니다.</p>
-            </div>
+            <h3>📋 방 목록</h3>
+            <div class="ad-banner">[광고] 오목의 신이 되어보세요!</div>
+            <div id="room-list">개설된 방이 없습니다.</div>
         </div>
     </div>
 
     <div id="game-screen" class="screen hidden">
         <div class="game-header">
             <h2 id="room-title">방 제목</h2>
-            <div id="player-list"></div>
-            <button onclick="leaveRoom()" style="background:#ff6b6b; color:white;">나가기</button>
+            <div id="player-list">대기중...</div>
+            
+            <div id="timer-box">남은 시간: <span id="timer">30</span>초</div>
+            
+            <button onclick="leaveRoom()" class="exit-btn">나가기</button>
         </div>
-        <h3 id="status"></h3>
-        <div id="board"></div>
+        
+        <h3 id="status">대기중...</h3>
+        
+        <div id="game-container">
+            <div id="board"></div>
+
+            <div id="chat-container">
+                <div id="chat-messages"></div>
+                <div class="chat-input-box">
+                    <input type="text" id="chat-input" placeholder="메시지 입력..." onkeypress="if(event.keyCode==13) sendChat()">
+                    <button onclick="sendChat()">전송</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>

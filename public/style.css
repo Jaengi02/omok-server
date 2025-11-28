@@ -1,46 +1,62 @@
-/* public/style.css */
-body { text-align: center; background: #f0f0f0; font-family: 'Malgun Gothic', sans-serif; }
+body { text-align: center; background: #f0f0f0; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 0; }
 .hidden { display: none !important; }
+button { padding: 10px 15px; cursor: pointer; background: #e3c586; border: 1px solid #000; border-radius: 5px; }
+input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; }
 
-/* 입력창 꾸미기 */
-input { padding: 8px; margin: 5px; width: 200px; }
-button { padding: 8px 15px; cursor: pointer; background: #e3c586; border: 1px solid #000; }
+/* 대기실 디자인 */
+.room-section { background: white; padding: 15px; margin: 15px auto; width: 90%; max-width: 400px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.room-item { border-bottom: 1px solid #eee; padding: 10px; cursor: pointer; }
+.room-item:hover { background-color: #ffebcd; }
+.ad-banner { background: #ddd; padding: 10px; font-size: 12px; color: #666; margin-bottom: 10px; border-radius: 5px; }
 
-.room-section {
-    background: white; padding: 20px; margin: 20px auto;
-    width: 300px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+/* 랭킹 리스트 */
+#ranking-list p { margin: 5px 0; font-size: 14px; }
+
+/* 게임 화면 레이아웃 (PC 기준) */
+#game-container {
+    display: flex; justify-content: center; align-items: flex-start; gap: 20px; padding: 10px;
 }
 
-/* 게임 헤더 */
-.game-header { margin-bottom: 10px; }
-#player-list { font-size: 20px; font-weight: bold; margin: 10px; }
-.p-black { color: black; background: #ddd; padding: 5px 10px; border-radius: 5px; }
-.p-white { color: #555; background: white; padding: 5px 10px; border-radius: 5px; border: 1px solid #ddd; }
-
-/* 오목판 (기존과 동일) */
+/* 오목판 */
 #board {
-    width: 600px; height: 600px; margin: 0 auto;
+    width: 600px; height: 600px;
     background: #e3c586; border: 2px solid black;
     display: grid; grid-template-columns: repeat(15, 1fr);
+    box-shadow: 5px 5px 15px rgba(0,0,0,0.3);
 }
-.cell { border: 1px solid #555; display: flex; justify-content: center; align-items: center; cursor: pointer; }
-.stone { width: 80%; height: 80%; border-radius: 50%; box-shadow: 2px 2px 2px rgba(0,0,0,0.3); }
-.stone.black { background: black; }
-.stone.white { background: white; border: 1px solid #ddd; }
+.cell { border: 0.5px solid #555; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+.stone { width: 85%; height: 85%; border-radius: 50%; box-shadow: 2px 2px 2px rgba(0,0,0,0.4); }
+.stone.black { background: radial-gradient(circle at 30% 30%, #555, #000); }
+.stone.white { background: radial-gradient(circle at 30% 30%, #fff, #ddd); }
 
-/* public/style.css 맨 아래에 추가하세요 */
+/* 타이머 */
+#timer-box { font-size: 20px; font-weight: bold; color: red; margin: 10px; }
+.exit-btn { background: #ff6b6b; color: white; border: none; }
 
-.room-item {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    padding: 15px;
-    margin: 5px 0;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: background 0.2s;
+/* 채팅창 */
+#chat-container {
+    width: 300px; height: 600px; background: white; border: 1px solid #ccc;
+    display: flex; flex-direction: column;
 }
+#chat-messages { flex: 1; padding: 10px; overflow-y: auto; text-align: left; background: #f9f9f9; }
+.chat-msg { margin-bottom: 5px; font-size: 14px; }
+.chat-msg b { color: #555; }
+.chat-input-box { display: flex; border-top: 1px solid #ccc; }
+#chat-input { flex: 1; border: none; margin: 0; }
+.chat-input-box button { margin: 0; border: none; background: #ccc; border-radius: 0; }
 
-.room-item:hover {
-    background-color: #ffebcd; /* 마우스 올리면 살구색 */
-    font-weight: bold;
+/* 📱 모바일 반응형 (화면 폭 800px 이하) */
+@media (max-width: 800px) {
+    #game-container { flex-direction: column; align-items: center; }
+    
+    #board {
+        width: 95vw; height: 95vw; /* 화면 꽉 차게 */
+    }
+    
+    #chat-container {
+        width: 95vw; height: 200px; /* 채팅창 작게 아래로 */
+    }
+    
+    input { width: 60%; }
+    .room-section { width: 90%; }
 }
