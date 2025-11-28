@@ -1,6 +1,6 @@
 const socket = io();
 
-// UI Elements
+// UI Elements (화면 요소들)
 const board = document.getElementById('board');
 const statusDiv = document.getElementById('status');
 const roomListDiv = document.getElementById('room-list');
@@ -21,12 +21,12 @@ let amIHost = false;
 let isSpectator = false;
 let lastStoneElement = null;
 
-// [Sound]
+// [Sound] 효과음
 const soundStone = new Audio('stone.mp3');
 const soundWin = new Audio('win.mp3');
 const soundLose = new Audio('lose.mp3');
 
-// [Auto Login]
+// [Auto Login] 자동 로그인
 window.onload = () => {
     const savedName = localStorage.getItem('omok-name');
     const savedPass = localStorage.getItem('omok-pass');
@@ -47,14 +47,14 @@ function logout() {
     }
 }
 
-// [Login Success]
+// [Login Success] 로그인 성공
 socket.on('loginSuccess', (data) => {
     myName = data.name;
     localStorage.setItem('omok-name', document.getElementById('username').value || myName);
     const passVal = document.getElementById('password').value;
     if(passVal) localStorage.setItem('omok-pass', passVal);
 
-    updateUserInfo(data); // 정보 갱신
+    updateUserInfo(data); 
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.remove('hidden');
 });
@@ -66,7 +66,7 @@ socket.on('loginFail', (msg) => {
     document.getElementById('lobby-screen').classList.add('hidden');
 });
 
-// [User Info Update]
+// [User Info Update] 정보 갱신
 function updateUserInfo(data) {
     document.getElementById('user-hello').innerText = `안녕하세요, ${data.name}님!`;
     document.getElementById('user-points').innerText = `${data.points} P`;
@@ -80,9 +80,9 @@ function updateUserInfo(data) {
     window.myItems = data.items || [];
     window.myEquipped = data.equipped || 'default';
 }
-socket.on('infoUpdate', updateUserInfo); // 실시간 포인트/전적 갱신
+socket.on('infoUpdate', updateUserInfo);
 
-// [Shop Logic]
+// [Shop Logic] 상점 관련
 function openShop() {
     document.getElementById('shop-modal').classList.remove('hidden');
     document.getElementById('shop-modal').style.display = 'flex';
@@ -94,12 +94,13 @@ function closeShop() {
     document.getElementById('shop-modal').style.display = 'none';
 }
 
+// ▼▼▼ 여기가 수정된 부분입니다 (흑/백 동시 표시) ▼▼▼
 function renderShopItems() {
     const items = [
-        { id: 'default', name: '기본돌', price: 0, color: '#333' },
-        { id: 'gold', name: '황금돌', price: 500, color: 'gold' },
-        { id: 'diamond', name: '다이아', price: 1000, color: 'cyan' },
-        { id: 'ruby', name: '루비', price: 2000, color: 'red' }
+        { id: 'default', name: '기본돌', price: 0 },
+        { id: 'gold', name: '황금돌', price: 500 },
+        { id: 'diamond', name: '다이아', price: 1000 },
+        { id: 'ruby', name: '루비', price: 2000 }
     ];
     
     const container = document.getElementById('shop-items');
@@ -109,61 +110,97 @@ function renderShopItems() {
         const div = document.createElement('div');
         div.style.border = '1px solid #ddd';
         div.style.padding = '10px';
-        div.style.borderRadius = '5px';
-        div.style.width = '80px';
+        div.style.borderRadius = '10px';
+        div.style.width = '100px';
+        div.style.display = 'flex';
+        div.style.flexDirection = 'column';
+        div.style.alignItems = 'center';
+        div.style.background = '#fff';
 
-        // 돌 미리보기
-        const preview = document.createElement('div');
-        preview.style.width = '30px'; preview.style.height = '30px';
-        preview.style.borderRadius = '50%'; preview.style.margin = '0 auto 5px auto';
-        preview.style.backgroundColor = item.color;
-        if(item.id === 'gold') preview.style.border = '2px solid orange';
+        // 미리보기 박스 (흑돌 + 백돌)
+        const previewBox = document.createElement('div');
+        previewBox.style.display = 'flex';
+        previewBox.style.gap = '5px';
+        previewBox.style.marginBottom = '8px';
+        
+        // 흑돌 미리보기
+        const blackStone = document.createElement('div');
+        blackStone.className = `stone black ${item.id}`; 
+        blackStone.style.width = '35px';
+        blackStone.style.height = '35px';
+        blackStone.style.position = 'static';
+        blackStone.style.boxShadow = '1px 1px 3px rgba(0,0,0,0.3)';
 
+        // 백돌 미리보기
+        const whiteStone = document.createElement('div');
+        whiteStone.className = `stone white ${item.id}`;
+        whiteStone.style.width = '35px';
+        whiteStone.style.height = '35px';
+        whiteStone.style.position = 'static';
+        whiteStone.style.boxShadow = '1px 1px 3px rgba(0,0,0,0.3)';
+
+        previewBox.append(blackStone, whiteStone);
+
+        // 이름과 가격
         const name = document.createElement('div');
         name.innerText = item.name;
+        name.style.fontWeight = 'bold';
+        name.style.fontSize = '14px';
+        
         const price = document.createElement('div');
         price.innerText = `${item.price}P`;
+        price.style.color = '#555';
+        price.style.fontSize = '12px';
         
+        // 버튼
         const btn = document.createElement('button');
         btn.style.marginTop = '5px';
         btn.style.fontSize = '12px';
-        btn.style.padding = '5px';
+        btn.style.padding = '5px 10px';
+        btn.style.width = '100%';
 
         if (window.myItems.includes(item.id)) {
             if (window.myEquipped === item.id) {
                 btn.innerText = '장착중';
                 btn.disabled = true;
-                btn.style.background = '#aaa';
+                btn.style.background = '#555';
+                btn.style.color = 'white';
+                btn.style.border = '1px solid #555';
             } else {
                 btn.innerText = '장착';
+                btn.style.background = 'white';
+                btn.style.color = '#333';
+                btn.style.border = '1px solid #ccc';
                 btn.onclick = () => socket.emit('equipItem', item.id);
             }
         } else {
             btn.innerText = '구매';
+            btn.style.background = '#e3c586';
+            btn.style.color = 'black';
             btn.onclick = () => {
-                if(confirm(`${item.price}포인트를 사용하여 구매하시겠습니까?`)) {
+                if(confirm(`${item.name}을(를) ${item.price}포인트에 구매하시겠습니까?`)) {
                     socket.emit('buyItem', item.id);
                 }
             };
         }
 
-        div.append(preview, name, price, btn);
+        div.append(previewBox, name, price, btn);
         container.appendChild(div);
     });
 }
+// ▲▲▲ 여기까지 상점 함수 끝 ▲▲▲
 
 socket.on('shopUpdate', (data) => {
-    // 구매/장착 후 데이터 갱신
     document.getElementById('user-points').innerText = `${data.points} P`;
     document.getElementById('shop-points').innerText = data.points;
     window.myItems = data.items;
     window.myEquipped = data.equipped;
-    renderShopItems(); // 상점 화면 다시 그리기
+    renderShopItems();
 });
 socket.on('alert', (msg) => alert(msg));
 
 
-// [Basic Features]
+// [Basic Features] 기본 기능
 socket.on('userListUpdate', (userList) => {
     onlineCountSpan.innerText = userList.length;
     onlineListDiv.innerText = userList.join(', ');
@@ -213,7 +250,7 @@ socket.on('roomListUpdate', (rooms) => {
     });
 });
 
-// [Game Logic]
+// [Game Logic] 게임 로직
 socket.on('roomJoined', (data) => {
     myColor = data.color;
     amIHost = data.isHost;
@@ -281,13 +318,12 @@ function initBoard(currentBoardData) {
             board.appendChild(cell);
 
             if (currentBoardData && currentBoardData[y][x]) {
-                // stoneValue = "black:gold" -> split -> color="black", skin="gold"
                 const parts = currentBoardData[y][x].split(':');
                 const color = parts[0];
                 const skin = parts[1] || 'default';
                 
                 const stone = document.createElement('div');
-                stone.className = `stone ${color} ${skin}`; // 스킨 클래스 추가
+                stone.className = `stone ${color} ${skin}`;
                 cell.appendChild(stone);
             }
         }
@@ -298,7 +334,6 @@ socket.on('updateBoard', (data) => {
     const index = data.y * 19 + data.x;
     const cell = board.children[index];
     const stone = document.createElement('div');
-    // 스킨 적용 (data.skin)
     stone.className = `stone ${data.color} ${data.skin || 'default'}`;
     
     if (lastStoneElement) lastStoneElement.classList.remove('last-move');
