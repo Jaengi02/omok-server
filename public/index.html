@@ -2,48 +2,47 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>오목 온라인 (방 만들기)</title>
+    <title>오목 온라인</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="login-screen" class="screen">
         <h1>오목 온라인</h1>
         <input type="text" id="username" placeholder="닉네임 입력" autofocus>
-        <button onclick="enterLobby()">로비 입장</button>
+        <button onclick="login()">접속</button>
     </div>
 
     <div id="lobby-screen" class="screen hidden">
         <h1>대기실</h1>
-        <p id="user-hello"></p>
+        <div id="my-info">
+            <span id="user-hello"></span>
+            <span id="user-stats" style="color:blue; font-weight:bold;"></span>
+        </div>
         
         <div class="room-section">
             <h3>🏠 방 만들기</h3>
             <input type="text" id="create-room-name" placeholder="방 제목">
             <input type="text" id="create-room-pass" placeholder="비밀번호 (선택)">
-            <button onclick="createRoom()">방 만들기</button>
+            <button onclick="createRoom()">생성</button>
         </div>
 
         <hr>
 
         <div class="room-section">
-            <h3>🏃 방 들어가기</h3>
-            <input type="text" id="join-room-name" placeholder="방 제목 입력">
-            <input type="text" id="join-room-pass" placeholder="비밀번호">
-            <button onclick="joinRoom()">입장하기</button>
+            <h3>📋 방 목록 (클릭하여 입장)</h3>
+            <div id="room-list">
+                <p>개설된 방이 없습니다.</p>
+            </div>
         </div>
     </div>
 
     <div id="game-screen" class="screen hidden">
         <div class="game-header">
             <h2 id="room-title">방 제목</h2>
-            <div id="player-list">
-                <span id="p1-name" class="p-black">대기중...</span> VS 
-                <span id="p2-name" class="p-white">대기중...</span>
-            </div>
+            <div id="player-list"></div>
             <button onclick="leaveRoom()" style="background:#ff6b6b; color:white;">나가기</button>
         </div>
-        
-        <h3 id="status">상대방을 기다리는 중...</h3>
+        <h3 id="status"></h3>
         <div id="board"></div>
     </div>
 

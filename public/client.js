@@ -2,20 +2,32 @@
 const socket = io();
 const board = document.getElementById('board');
 const statusDiv = document.getElementById('status');
+const roomListDiv = document.getElementById('room-list');
 let myColor = null;
 
-// [1] 로비 입장
-function enterLobby() {
+// [1] 로그인 요청
+function login() {
     const name = document.getElementById('username').value;
     if (!name) return alert('닉네임을 입력하세요.');
     socket.emit('login', name);
-    
-    document.getElementById('user-hello').innerText = `안녕하세요, ${name}님!`;
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('lobby-screen').classList.remove('hidden');
 }
 
-// [2] 방 만들기
+// [2] 로그인 성공 (전적 받음)
+socket.on('loginSuccess', ({ name, stats }) => {
+    document.getElementById('user-hello').innerText = `안녕하세요, ${name}님!`;
+    
+    // 승률 계산
+    const total = stats.wins + stats.loses;
+    const rate = total === 0 ? 0 : Math.round((stats.wins / total) * 100);
+    document.getElementById('user-stats').innerText = `[전적: ${stats.wins}승 ${stats.loses}패 (승률 ${rate}%)]`;
+
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('lobby-screen').classList.remove('hidden');
+});
+
+socket.on('loginFail', (msg) => alert(msg));
+
+// [3] 방 만들기
 function createRoom() {
     const name = document.getElementById('create-room-name').value;
     const pass = document.getElementById('create-room-pass').value;
@@ -23,46 +35,55 @@ function createRoom() {
     socket.emit('createRoom', { roomName: name, password: pass });
 }
 
-// [3] 방 들어가기
-function joinRoom() {
-    const name = document.getElementById('join-room-name').value;
-    const pass = document.getElementById('join-room-pass').value;
-    if (!name) return alert('방 제목을 입력하세요.');
-    socket.emit('joinRoom', { roomName: name, password: pass });
-}
+// [4] 방 목록 업데이트 (서버가 보내줌)
+socket.on('roomListUpdate', (rooms) => {
+    roomListDiv.innerHTML = ''; // 기존 목록 지우기
 
-// [4] 방 나가기
-function leaveRoom() {
-    if(confirm("정말 나가시겠습니까?")) {
-        socket.emit('leaveRoom');
-        location.reload();
+    if (rooms.length === 0) {
+        roomListDiv.innerHTML = '<p>현재 개설된 방이 없습니다.</p>';
+        return;
     }
-}
 
-// [5] 서버 응답 처리
-socket.on('error', (msg) => alert(msg));
+    rooms.forEach((room) => {
+        const div = document.createElement('div');
+        div.className = 'room-item';
+        // 방 제목 + 잠금표시 + 인원수
+        const lockIcon = room.isLocked ? '🔒' : '🔓';
+        div.innerHTML = `<span>${room.name} ${lockIcon} (${room.count}/2)</span>`;
+        
+        // 클릭하면 입장 시도
+        div.onclick = () => {
+            if (room.count >= 2) return alert('꽉 찬 방입니다.');
+            
+            let password = '';
+            if (room.isLocked) {
+                password = prompt('비밀번호를 입력하세요:');
+                if (password === null) return; // 취소 누름
+            }
+            socket.emit('joinRoom', { roomName: room.name, password: password });
+        };
+        roomListDiv.appendChild(div);
+    });
+});
 
-// 방 입장 성공! (게임 화면으로 전환)
+// [5] 게임 입장 및 진행 (기존과 유사)
 socket.on('gameJoined', (data) => {
     myColor = data.color;
     document.getElementById('lobby-screen').classList.add('hidden');
     document.getElementById('game-screen').classList.remove('hidden');
-    
     document.getElementById('room-title').innerText = `방: ${data.roomName}`;
     board.innerHTML = '';
     initBoard();
 });
 
-// 참여자 목록 업데이트 (화면에 이름 표시)
 socket.on('updatePlayers', (players) => {
     const p1 = players.find(p => p.color === 'black');
     const p2 = players.find(p => p.color === 'white');
-    
-    document.getElementById('p1-name').innerText = p1 ? `${p1.name}(흑)` : "기다리는 중...";
-    document.getElementById('p2-name').innerText = p2 ? `${p2.name}(백)` : "기다리는 중...";
+    const p1Name = p1 ? p1.name : "대기중";
+    const p2Name = p2 ? p2.name : "대기중";
+    document.getElementById('player-list').innerText = `⚫${p1Name} vs ⚪${p2Name}`;
 });
 
-// 기존 게임 로직들
 function initBoard() {
     for (let y = 0; y < 15; y++) {
         for (let x = 0; x < 15; x++) {
@@ -81,3 +102,5 @@ socket.on('updateBoard', (data) => {
 });
 socket.on('status', (msg) => statusDiv.innerText = msg);
 socket.on('gameOver', (msg) => { alert(msg); location.reload(); });
+socket.on('error', (msg) => alert(msg));
+function leaveRoom() { socket.emit('leaveRoom'); location.reload(); }
