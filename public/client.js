@@ -62,7 +62,7 @@ socket.on('loginSuccess', (data) => {
 socket.on('loginFail', (msg) => {
     localStorage.clear();
     alert(msg);
-    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.add('hidden');
 });
 
@@ -205,6 +205,7 @@ socket.on('shopUpdate', (data) => {
     renderShopItems();
 });
 socket.on('alert', (msg) => alert(msg));
+
 
 socket.on('userListUpdate', (userList) => {
     onlineCountSpan.innerText = userList.length;
