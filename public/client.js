@@ -23,7 +23,7 @@ let lastStoneElement = null;
 
 // [NEW] 활동 감지 변수
 let activityTimer;
-const PING_INTERVAL_MS = 10 * 60 * 1000; // 10분마다 핑을 보냅니다
+const PING_INTERVAL_MS = 10 * 60 * 1000;
 
 // 🔊 효과음
 const soundStone = new Audio('stone.mp3');
@@ -45,7 +45,6 @@ function login() {
 }
 
 function logout() {
-    // [NEW] 로그아웃 시 타이머 정지 및 Local Storage 정리
     clearTimeout(activityTimer);
     localStorage.clear();
     location.reload();
@@ -58,8 +57,7 @@ socket.on('loginSuccess', (data) => {
     if(passVal) localStorage.setItem('omok-pass', passVal);
 
     updateUserInfo(data);
-    setupActivityMonitoring(); // [NEW] 로그인 성공 시 활동 감지 시작!
-
+    setupActivityMonitoring();
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.remove('hidden');
 });
@@ -89,10 +87,9 @@ function resetActivityTimer() {
     }, PING_INTERVAL_MS);
 }
 
-// [NEW] 서버로부터 강제 로그아웃 명령 수신
 socket.on('force_logout', (message) => {
     alert(message); 
-    logout(); // 로그아웃 처리
+    logout(); 
 });
 
 
@@ -121,8 +118,8 @@ function closeShop() {
     document.getElementById('shop-modal').classList.add('hidden');
     document.getElementById('shop-modal').style.display = 'none';
 }
-// [Shop Logic] (생략) - 이전 코드와 동일
-function renderShopItems() {
+
+function renderShopItems() { /* ... (생략) ... */
     const items = [
         { id: 'default', name: '기본돌', price: 0 },
         { id: 'gold', name: '황금돌', price: 500 },
@@ -210,23 +207,30 @@ function renderShopItems() {
         container.appendChild(div);
     });
 }
-
-function sendChat() {
-    const input = document.getElementById('chat-input');
-    if (input.value.trim()) { socket.emit('chat', input.value); input.value = ''; }
-}
-socket.on('chat', (data) => {
-    const div = document.createElement('div');
-    div.className = 'chat-msg';
-    div.innerHTML = `<b>${data.sender}:</b> ${data.msg}`;
-    chatMsgs.appendChild(div);
-    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+socket.on('shopUpdate', (data) => {
+    document.getElementById('user-points').innerText = `${data.points} P`;
+    document.getElementById('shop-points').innerText = data.points;
+    window.myItems = data.items;
+    window.myEquipped = data.equipped;
+    renderShopItems();
 });
 socket.on('alert', (msg) => alert(msg));
-// ... (기타 함수들: initBoard, updateBoard, roomJoined, etc. - 이전과 동일)
+
+
 socket.on('userListUpdate', (userList) => {
     onlineCountSpan.innerText = userList.length;
     onlineListDiv.innerText = userList.join(', ');
+});
+function sendLobbyChat() {
+    const input = document.getElementById('lobby-chat-input');
+    if(input.value.trim()) { socket.emit('lobbyChat', input.value); input.value = ''; }
+}
+socket.on('lobbyChat', (data) => {
+    const box = document.getElementById('lobby-chat-box');
+    const p = document.createElement('div');
+    p.innerHTML = `<b>${data.sender}:</b> ${data.msg}`;
+    box.appendChild(p);
+    box.scrollTop = box.scrollHeight;
 });
 socket.on('rankingUpdate', (rankList) => {
     rankingDiv.innerHTML = '';
