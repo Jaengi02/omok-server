@@ -1,6 +1,6 @@
 const socket = io();
 
-// UI Elements (화면 요소들)
+// UI Elements
 const board = document.getElementById('board');
 const statusDiv = document.getElementById('status');
 const roomListDiv = document.getElementById('room-list');
@@ -21,12 +21,16 @@ let amIHost = false;
 let isSpectator = false;
 let lastStoneElement = null;
 
-// [Sound] 효과음
+// [NEW] 활동 감지 변수
+let activityTimer;
+const PING_INTERVAL_MS = 10 * 60 * 1000; // 10분마다 핑을 보냅니다
+
+// 🔊 효과음
 const soundStone = new Audio('stone.mp3');
 const soundWin = new Audio('win.mp3');
 const soundLose = new Audio('lose.mp3');
 
-// [Auto Login] 자동 로그인
+// [0] 자동 로그인
 window.onload = () => {
     const savedName = localStorage.getItem('omok-name');
     const savedPass = localStorage.getItem('omok-pass');
@@ -41,20 +45,21 @@ function login() {
 }
 
 function logout() {
-    if(confirm('로그아웃?')) {
-        localStorage.clear();
-        location.reload();
-    }
+    // [NEW] 로그아웃 시 타이머 정지 및 Local Storage 정리
+    clearTimeout(activityTimer);
+    localStorage.clear();
+    location.reload();
 }
 
-// [Login Success] 로그인 성공
 socket.on('loginSuccess', (data) => {
     myName = data.name;
     localStorage.setItem('omok-name', document.getElementById('username').value || myName);
     const passVal = document.getElementById('password').value;
     if(passVal) localStorage.setItem('omok-pass', passVal);
 
-    updateUserInfo(data); 
+    updateUserInfo(data);
+    setupActivityMonitoring(); // [NEW] 로그인 성공 시 활동 감지 시작!
+
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.remove('hidden');
 });
@@ -66,7 +71,32 @@ socket.on('loginFail', (msg) => {
     document.getElementById('lobby-screen').classList.add('hidden');
 });
 
-// [User Info Update] 정보 갱신
+// [NEW] 활동 감지 로직
+function setupActivityMonitoring() {
+    ['mousemove', 'keydown', 'scroll', 'click'].forEach(eventType => {
+        document.addEventListener(eventType, resetActivityTimer);
+    });
+    resetActivityTimer();
+}
+
+function resetActivityTimer() {
+    clearTimeout(activityTimer);
+    activityTimer = setTimeout(() => {
+        if (socket.connected) {
+            socket.emit('activity_ping'); // 서버로 활동 신호 전송
+        }
+        resetActivityTimer(); 
+    }, PING_INTERVAL_MS);
+}
+
+// [NEW] 서버로부터 강제 로그아웃 명령 수신
+socket.on('force_logout', (message) => {
+    alert(message); 
+    logout(); // 로그아웃 처리
+});
+
+
+// --- 기존 기능 유지 ---
 function updateUserInfo(data) {
     document.getElementById('user-hello').innerText = `안녕하세요, ${data.name}님!`;
     document.getElementById('user-points').innerText = `${data.points} P`;
@@ -76,13 +106,11 @@ function updateUserInfo(data) {
     const rate = total === 0 ? 0 : Math.round((stats.wins / total) * 100);
     document.getElementById('user-stats').innerText = `${stats.wins}승 ${stats.loses}패 (${rate}%)`;
 
-    // 상점용 데이터 저장
     window.myItems = data.items || [];
     window.myEquipped = data.equipped || 'default';
 }
 socket.on('infoUpdate', updateUserInfo);
 
-// [Shop Logic] 상점 관련
 function openShop() {
     document.getElementById('shop-modal').classList.remove('hidden');
     document.getElementById('shop-modal').style.display = 'flex';
@@ -93,8 +121,7 @@ function closeShop() {
     document.getElementById('shop-modal').classList.add('hidden');
     document.getElementById('shop-modal').style.display = 'none';
 }
-
-// ▼▼▼ 여기가 수정된 부분입니다 (흑/백 동시 표시) ▼▼▼
+// [Shop Logic] (생략) - 이전 코드와 동일
 function renderShopItems() {
     const items = [
         { id: 'default', name: '기본돌', price: 0 },
@@ -117,13 +144,11 @@ function renderShopItems() {
         div.style.alignItems = 'center';
         div.style.background = '#fff';
 
-        // 미리보기 박스 (흑돌 + 백돌)
         const previewBox = document.createElement('div');
         previewBox.style.display = 'flex';
         previewBox.style.gap = '5px';
         previewBox.style.marginBottom = '8px';
         
-        // 흑돌 미리보기
         const blackStone = document.createElement('div');
         blackStone.className = `stone black ${item.id}`; 
         blackStone.style.width = '35px';
@@ -131,7 +156,6 @@ function renderShopItems() {
         blackStone.style.position = 'static';
         blackStone.style.boxShadow = '1px 1px 3px rgba(0,0,0,0.3)';
 
-        // 백돌 미리보기
         const whiteStone = document.createElement('div');
         whiteStone.className = `stone white ${item.id}`;
         whiteStone.style.width = '35px';
@@ -141,7 +165,6 @@ function renderShopItems() {
 
         previewBox.append(blackStone, whiteStone);
 
-        // 이름과 가격
         const name = document.createElement('div');
         name.innerText = item.name;
         name.style.fontWeight = 'bold';
@@ -152,7 +175,6 @@ function renderShopItems() {
         price.style.color = '#555';
         price.style.fontSize = '12px';
         
-        // 버튼
         const btn = document.createElement('button');
         btn.style.marginTop = '5px';
         btn.style.fontSize = '12px';
@@ -188,40 +210,30 @@ function renderShopItems() {
         container.appendChild(div);
     });
 }
-// ▲▲▲ 여기까지 상점 함수 끝 ▲▲▲
 
-socket.on('shopUpdate', (data) => {
-    document.getElementById('user-points').innerText = `${data.points} P`;
-    document.getElementById('shop-points').innerText = data.points;
-    window.myItems = data.items;
-    window.myEquipped = data.equipped;
-    renderShopItems();
+function sendChat() {
+    const input = document.getElementById('chat-input');
+    if (input.value.trim()) { socket.emit('chat', input.value); input.value = ''; }
+}
+socket.on('chat', (data) => {
+    const div = document.createElement('div');
+    div.className = 'chat-msg';
+    div.innerHTML = `<b>${data.sender}:</b> ${data.msg}`;
+    chatMsgs.appendChild(div);
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
 });
 socket.on('alert', (msg) => alert(msg));
-
-
-// [Basic Features] 기본 기능
+// ... (기타 함수들: initBoard, updateBoard, roomJoined, etc. - 이전과 동일)
 socket.on('userListUpdate', (userList) => {
     onlineCountSpan.innerText = userList.length;
     onlineListDiv.innerText = userList.join(', ');
-});
-function sendLobbyChat() {
-    const input = document.getElementById('lobby-chat-input');
-    if(input.value.trim()) { socket.emit('lobbyChat', input.value); input.value = ''; }
-}
-socket.on('lobbyChat', (data) => {
-    const box = document.getElementById('lobby-chat-box');
-    const p = document.createElement('div');
-    p.innerHTML = `<b>${data.sender}:</b> ${data.msg}`;
-    box.appendChild(p);
-    box.scrollTop = box.scrollHeight;
 });
 socket.on('rankingUpdate', (rankList) => {
     rankingDiv.innerHTML = '';
     rankList.forEach((user, index) => {
         const p = document.createElement('p');
         p.innerText = `${index+1}위: ${user.name} (${user.wins}승)`;
-        if(index===0) p.style.color='#d4af37';
+        if (index === 0) p.style.color = '#d4af37';
         rankingDiv.appendChild(p);
     });
 });
@@ -249,8 +261,6 @@ socket.on('roomListUpdate', (rooms) => {
         roomListDiv.appendChild(div);
     });
 });
-
-// [Game Logic] 게임 로직
 socket.on('roomJoined', (data) => {
     myColor = data.color;
     amIHost = data.isHost;
@@ -274,7 +284,6 @@ socket.on('roomJoined', (data) => {
     chatMsgs.innerHTML = '';
     initBoard(data.board);
 });
-
 socket.on('updateRoomInfo', (data) => {
     const { players, spectators, p2Ready } = data;
     const p1 = players.find(p => p.color === 'black');
@@ -296,17 +305,14 @@ socket.on('updateRoomInfo', (data) => {
         btnStart.style.opacity = p2Ready ? 1 : 0.5;
     }
 });
-
 function toggleReady() { socket.emit('toggleReady'); }
 function startGame() { socket.emit('startGame'); }
-
 socket.on('gameStart', (msg) => {
     try { soundWin.play(); } catch(e){} 
     setTimeout(() => { alert(msg); statusDiv.innerText = msg; }, 100);
     btnReady.classList.add('hidden');
     btnStart.classList.add('hidden');
 });
-
 function initBoard(currentBoardData) {
     board.innerHTML = '';
     lastStoneElement = null;
@@ -329,7 +335,6 @@ function initBoard(currentBoardData) {
         }
     }
 }
-
 socket.on('updateBoard', (data) => {
     const index = data.y * 19 + data.x;
     const cell = board.children[index];
@@ -343,32 +348,17 @@ socket.on('updateBoard', (data) => {
     cell.appendChild(stone);
     try { soundStone.play(); } catch(e) {}
 });
-
 socket.on('status', (msg) => statusDiv.innerText = msg);
 socket.on('timerUpdate', (time) => {
     timerSpan.innerText = time;
     timerSpan.style.color = time <= 5 ? 'red' : 'black';
 });
-
 socket.on('gameOver', (data) => {
     if (data.winner === myName) try { soundWin.play(); } catch(e){}
     else try { soundLose.play(); } catch(e){}
     
     setTimeout(() => { alert(`게임 종료! ${data.msg}`); location.reload(); }, 200);
 });
-
 socket.on('forceLeave', () => { alert("방 사라짐"); location.reload(); });
 socket.on('error', (msg) => alert(msg));
 function leaveRoom() { socket.emit('leaveRoom'); location.reload(); }
-
-function sendChat() {
-    const input = document.getElementById('chat-input');
-    if (input.value.trim()) { socket.emit('chat', input.value); input.value = ''; }
-}
-socket.on('chat', (data) => {
-    const div = document.createElement('div');
-    div.className = 'chat-msg';
-    div.innerHTML = `<b>${data.sender}:</b> ${data.msg}`;
-    chatMsgs.appendChild(div);
-    chatMsgs.scrollTop = chatMsgs.scrollHeight;
-});

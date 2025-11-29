@@ -10,32 +10,76 @@ const io = socketIo(server);
 const PORT = process.env.PORT || 3000;
 app.use(express.static('public'));
 
-// [중요] MongoDB 연결 (비밀번호 확인하세요!)
+// ---------------------------------------------------------
+// [NEW] 30분 비활동 타임아웃 설정
+// ---------------------------------------------------------
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30분 (밀리초)
+
+// ---------------------------------------------------------
+// 1. MongoDB 연결 및 스키마
+// ---------------------------------------------------------
 const MONGO_URI = "mongodb+srv://koojj321:abcd1234@cluster0.yh4yszy.mongodb.net/?appName=Cluster0";
 
 mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ DB 연결 성공!'))
     .catch(err => console.error('❌ DB 연결 실패:', err));
 
-// [UPDATED] 유저 스키마 (포인트, 아이템 추가)
 const userSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     wins: { type: Number, default: 0 },
     loses: { type: Number, default: 0 },
-    points: { type: Number, default: 0 }, // 가입 보너스 0원
-    items: { type: [String], default: ['default'] }, // 보유 아이템
-    equipped: { type: String, default: 'default' }   // 장착중인 스킨
+    points: { type: Number, default: 0 },
+    items: { type: [String], default: ['default'] },
+    equipped: { type: String, default: 'default' }
 });
 const User = mongoose.model('User', userSchema);
 
+// ---------------------------------------------------------
+// 2. 서버 메모리 데이터
+// ---------------------------------------------------------
 const BOARD_SIZE = 19;
 let rooms = {}; 
-let connectedUsers = {}; 
+let connectedUsers = {}; // socket.id -> username
+let socketActivity = {}; // socket.id -> lastActivity timestamp (for timeout)
+
+// [NEW] 1분마다 비활성 사용자 검사 타이머 실행
+setInterval(checkInactiveUsers, 60000); 
+
+function checkInactiveUsers() {
+    const now = Date.now();
+    for (const id in socketActivity) {
+        if (now - socketActivity[id] > INACTIVITY_TIMEOUT_MS) {
+            console.log(`[Timeout] User ${connectedUsers[id]} (ID: ${id}) timed out.`);
+            
+            const socketToDisconnect = io.sockets.sockets.get(id);
+
+            if (socketToDisconnect) {
+                // 클라이언트에게 강제 로그아웃 메시지 전송
+                socketToDisconnect.emit('force_logout', '30분간 활동이 없어 자동 로그아웃되었습니다.');
+                socketToDisconnect.disconnect(true);
+            }
+            
+            // 메모리 정리
+            delete socketActivity[id];
+            delete connectedUsers[id];
+            
+            // (추가 정리 로직은 disconnect 핸들러에서 처리됨)
+        }
+    }
+}
+
 
 io.on('connection', (socket) => {
     let myRoom = null;
     let myName = null;
+
+    // [NEW] 클라이언트 활동 핑
+    socket.on('activity_ping', () => {
+        if (socketActivity[socket.id]) {
+            socketActivity[socket.id] = Date.now();
+        }
+    });
 
     // [1] 로그인
     socket.on('login', async ({ name, password }) => {
@@ -51,8 +95,8 @@ io.on('connection', (socket) => {
             myName = name;
             socket.myName = name;
             connectedUsers[socket.id] = name;
+            socketActivity[socket.id] = Date.now(); // 로그인 시 활동 시간 기록
 
-            // 유저 정보(포인트, 스킨 등) 전송
             socket.emit('loginSuccess', { 
                 name, 
                 stats: { wins: user.wins, loses: user.loses },
@@ -73,21 +117,15 @@ io.on('connection', (socket) => {
 
     // [2] 상점 기능 (구매)
     socket.on('buyItem', async (itemId) => {
-        const prices = { 'gold': 500, 'diamond': 1000, 'ruby': 2000 }; // 가격표
+        const prices = { 'gold': 500, 'diamond': 1000, 'ruby': 2000 }; 
         const cost = prices[itemId];
 
         try {
             const user = await User.findOne({ name: myName });
-            if (!user) return;
-
-            if (user.items.includes(itemId)) {
-                return socket.emit('alert', '이미 보유한 아이템입니다.');
-            }
-            if (user.points < cost) {
-                return socket.emit('alert', '포인트가 부족합니다!');
+            if (!user || user.items.includes(itemId) || user.points < cost) {
+                return socket.emit('alert', user ? (user.items.includes(itemId) ? '이미 보유' : '포인트 부족') : '로그인 필요');
             }
 
-            // 구매 처리
             user.points -= cost;
             user.items.push(itemId);
             await user.save();
@@ -135,14 +173,12 @@ io.on('connection', (socket) => {
         myRoom = roomName;
         socket.join(roomName);
 
-        // 내 스킨 정보 가져오기
         const user = await User.findOne({ name: myName });
         const mySkin = user ? user.equipped : 'default';
 
         if (room.players.length < 2 && !room.isPlaying) {
             const color = room.players.length === 0 ? 'black' : 'white';
             const isHost = room.players.length === 0;
-            // 플레이어 정보에 스킨(skin) 추가
             room.players.push({ id: socket.id, name: socket.myName, color, isHost, isSpectator: false, skin: mySkin });
             
             socket.emit('roomJoined', { 
@@ -183,20 +219,20 @@ io.on('connection', (socket) => {
         startTimer(myRoom);
     });
 
+    // [5] 돌 두기
     socket.on('placeStone', ({ x, y }) => {
+        if (!myRoom || !rooms[myRoom]) return;
         const room = rooms[myRoom];
-        if (!room || !room.isPlaying) return;
-        const me = room.players.find(p => p.id === socket.id);
-        if (me.color !== room.turn || room.board[y][x] !== null) return;
+        if (!room.isPlaying) return;
 
-        // 보드에 '누구 돌인지' + '어떤 스킨인지' 저장
-        // 예: "black:gold" 또는 "white:default"
+        const me = room.players.find(p => p.id === socket.id);
+        if (me.color !== room.turn || room.board[y][x] !== null) return; // 관전자 체크는 client에서 막음
+
         const stoneValue = `${me.color}:${me.skin}`;
         room.board[y][x] = stoneValue;
         
         room.turn = room.turn === 'black' ? 'white' : 'black';
         
-        // 클라이언트에게 돌 정보 전송
         io.to(myRoom).emit('updateBoard', { x, y, color: me.color, skin: me.skin });
 
         if (checkWin(room.board, x, y, stoneValue)) endGame(myRoom, me.name);
@@ -207,16 +243,17 @@ io.on('connection', (socket) => {
         }
     });
 
+    // [6] 채팅
     socket.on('chat', (msg) => { if (myRoom) io.to(myRoom).emit('chat', { sender: myName, msg }); });
 
+    // [7] 나가기 처리
     socket.on('leaveRoom', () => handleDisconnect());
     socket.on('disconnect', () => handleDisconnect());
 
     function handleDisconnect() {
-        if (connectedUsers[socket.id]) {
-            delete connectedUsers[socket.id];
-            io.emit('userListUpdate', Object.values(connectedUsers));
-        }
+        if (socketActivity[socket.id]) delete socketActivity[socket.id]; // 활동 시간 정리
+        if (connectedUsers[socket.id]) delete connectedUsers[socket.id]; // 접속자 명단 정리
+
         if (myRoom && rooms[myRoom]) {
             const room = rooms[myRoom];
             const specIndex = room.spectators.findIndex(s => s.id === socket.id);
@@ -237,6 +274,7 @@ io.on('connection', (socket) => {
     }
 });
 
+// --- 타이머 및 게임 로직 (수익화 관련) ---
 function startTimer(roomName) {
     const room = rooms[roomName];
     if(!room) return;
@@ -262,7 +300,6 @@ async function endGame(roomName, winnerName) {
     const winner = room.players.find(p => p.name === winnerName);
     const loser = room.players.find(p => p.name !== winnerName);
 
-    // [UPDATED] 승리 시 포인트 지급 (+100)
     if (winner) await User.updateOne({ name: winner.name }, { $inc: { wins: 1, points: 100 } });
     if (loser) await User.updateOne({ name: loser.name }, { $inc: { loses: 1 } });
 
@@ -278,16 +315,8 @@ async function endGame(roomName, winnerName) {
 }
 
 function getRoomList() { return Object.keys(rooms).map(key => ({ name: key, isLocked: !!rooms[key].password, count: rooms[key].players.length, isPlaying: rooms[key].isPlaying })); }
-
-// [UPDATED] 랭킹: 0승은 제외
-async function getRankingDB() { 
-    try { 
-        return await User.find({ wins: { $gt: 0 } }).sort({ wins: -1 }).limit(5).select('name wins'); 
-    } catch { return []; } 
-}
-
+async function getRankingDB() { try { return await User.find({ wins: { $gt: 0 } }).sort({ wins: -1 }).limit(5).select('name wins'); } catch { return []; } }
 function checkWin(board, x, y, stoneValue) {
-    // stoneValue는 "black:gold" 형식이므로 색깔만 비교하기 위해 split
     const color = stoneValue.split(':')[0]; 
     const directions = [[1,0], [0,1], [1,1], [1,-1]];
     for (let [dx, dy] of directions) {
