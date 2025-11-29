@@ -11,11 +11,10 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static('public'));
 
 // ---------------------------------------------------------
-// [1] DB 및 스키마 설정
+// 1. MongoDB 연결 및 스키마
 // ---------------------------------------------------------
-// ▼▼▼ 비밀번호 수정 필수! ▼▼▼
 const MONGO_URI = "mongodb+srv://koojj321:abcd1234@cluster0.yh4yszy.mongodb.net/?appName=Cluster0";
-const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30분
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 
 mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ DB 연결 성공!'))
@@ -33,7 +32,7 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 
 // ---------------------------------------------------------
-// [2] 서버 메모리 및 타이머
+// 2. 서버 메모리 데이터
 // ---------------------------------------------------------
 const BOARD_SIZE = 19;
 let rooms = {}; 
@@ -61,17 +60,21 @@ io.on('connection', (socket) => {
     let myRoom = null;
     let myName = null;
 
-    // 활동 갱신
     socket.on('activity_ping', () => { if (socketActivity[socket.id]) socketActivity[socket.id] = Date.now(); });
 
     // [1] 로그인
     socket.on('login', async ({ name, password }) => {
         try {
             let user = await User.findOne({ name: name });
-            if (user && user.password !== password) return socket.emit('loginFail', '비밀번호 불일치');
-            if (!user) { user = new User({ name, password }); await user.save(); }
+            if (user) {
+                if (user.password !== password) return socket.emit('loginFail', '비밀번호 불일치');
+            } else {
+                user = new User({ name, password });
+                await user.save();
+            }
 
-            myName = name; socket.myName = name;
+            myName = name;
+            socket.myName = name;
             connectedUsers[socket.id] = name;
             socketActivity[socket.id] = Date.now();
 
@@ -86,7 +89,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // [2] 상점 및 게임 로직
+    // [2] 상점 및 방 로직
     socket.on('buyItem', async (itemId) => {
         const prices = { 'gold': 500, 'diamond': 1000, 'ruby': 2000 }; 
         const cost = prices[itemId];
@@ -114,9 +117,7 @@ io.on('connection', (socket) => {
         } catch (e) { console.error(e); }
     });
 
-    socket.on('lobbyChat', (msg) => io.emit('lobbyChat', { sender: myName, msg }));
-    
-    // [방 생성/입장/준비/시작/돌두기/나가기 로직은 이전과 동일하게 유지]
+    socket.on('lobbyChat', (msg) => { io.emit('lobbyChat', { sender: myName, msg }); });
     socket.on('createRoom', ({ roomName, password }) => {
         if (rooms[roomName]) return socket.emit('error', '이미 존재하는 방입니다.');
         rooms[roomName] = { password, players: [], spectators: [], board: Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null)), turn: 'black', timerId: null, timeLeft: 30, isPlaying: false, p2Ready: false };
@@ -141,33 +142,50 @@ io.on('connection', (socket) => {
         }
         io.to(roomName).emit('updateRoomInfo', { players: room.players, spectators: room.spectators, p2Ready: room.p2Ready });
     }
+
+    // [3] 게임 컨트롤
     socket.on('toggleReady', () => {
         const room = rooms[myRoom]; if (!room) return; const me = room.players.find(p => p.id === socket.id);
         if (!me || me.isHost) return; room.p2Ready = !room.p2Ready;
         io.to(myRoom).emit('updateRoomInfo', { players: room.players, spectators: room.spectators, p2Ready: room.p2Ready });
+        io.to(myRoom).emit('status', room.p2Ready ? '준비 완료! 방장님 시작하세요.' : '준비 취소.');
     });
+
     socket.on('startGame', () => {
         const room = rooms[myRoom]; if (!room) return; const me = room.players.find(p => p.id === socket.id);
         if (!me || !me.isHost || room.players.length < 2 || !room.p2Ready) return;
+        
         room.isPlaying = true; room.board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null)); room.turn = 'black';
         io.to(myRoom).emit('gameStart', `게임 시작!`); io.emit('roomListUpdate', getRoomList()); startTimer(myRoom);
     });
+
     socket.on('placeStone', ({ x, y }) => {
         if (!myRoom || !rooms[myRoom] || !rooms[myRoom].isPlaying) return; const room = rooms[myRoom];
         const me = room.players.find(p => p.id === socket.id);
         if (me.color !== room.turn || room.board[y][x] !== null) return;
         const stoneValue = `${me.color}:${me.skin}`; room.board[y][x] = stoneValue; room.turn = room.turn === 'black' ? 'white' : 'black';
         io.to(myRoom).emit('updateBoard', { x, y, color: me.color, skin: me.skin });
+
         if (checkWin(room.board, x, y, stoneValue)) endGame(myRoom, me.name);
-        else { resetTimer(myRoom); const nextName = room.players.find(p => p.color === room.turn).name; io.to(myRoom).emit('status', `${nextName} 차례`); }
+        else {
+            resetTimer(myRoom);
+            const nextName = room.players.find(p => p.color === room.turn).name;
+            io.to(myRoom).emit('status', `${nextName} 차례`);
+        }
     });
+
+    // [4] 나가기/종료
     socket.on('chat', (msg) => { if (myRoom) io.to(myRoom).emit('chat', { sender: myName, msg }); });
     socket.on('leaveRoom', () => handleDisconnect());
     socket.on('disconnect', () => handleDisconnect());
+
     function handleDisconnect() {
-        if (socketActivity[socket.id]) delete socketActivity[socket.id]; if (connectedUsers[socket.id]) delete connectedUsers[socket.id];
+        if (socketActivity[socket.id]) delete socketActivity[socket.id];
+        if (connectedUsers[socket.id]) delete connectedUsers[socket.id];
+
         for (const roomName in rooms) {
-            const room = rooms[roomName]; const specIndex = room.spectators.findIndex(s => s.id === socket.id);
+            const room = rooms[roomName];
+            const specIndex = room.spectators.findIndex(s => s.id === socket.id);
             if (specIndex !== -1) { room.spectators.splice(specIndex, 1); io.to(roomName).emit('updateRoomInfo', { players: room.players, spectators: room.spectators, p2Ready: room.p2Ready }); return; }
             const pIndex = room.players.findIndex(p => p.id === socket.id);
             if (pIndex !== -1) { 
@@ -187,21 +205,27 @@ function startTimer(roomName) {
     if(room.timerId) clearInterval(room.timerId);
     room.timerId = setInterval(() => {
         room.timeLeft--; io.to(roomName).emit('timerUpdate', room.timeLeft);
-        if(room.timeLeft <= 0) { clearInterval(room.timerId); const winner = room.players.find(p => p.color !== room.turn); if (winner) endGame(roomName, winner.name); }
+        if(room.timeLeft <= 0) {
+            clearInterval(room.timerId); const winner = room.players.find(p => p.color !== room.turn);
+            if (winner) endGame(roomName, winner.name);
+        }
     }, 1000);
 }
 function resetTimer(roomName) { if(rooms[roomName]) { clearInterval(rooms[roomName].timerId); startTimer(roomName); } }
 function stopTimer(roomName) { if(rooms[roomName]) clearInterval(rooms[roomName].timerId); }
+
 async function endGame(roomName, winnerName) {
     const room = rooms[roomName]; stopTimer(roomName);
     const winner = room.players.find(p => p.name === winnerName); const loser = room.players.find(p => p.name !== winnerName);
     if (winner) await User.updateOne({ name: winner.name }, { $inc: { wins: 1, points: 100 } });
     if (loser) await User.updateOne({ name: loser.name }, { $inc: { loses: 1 } });
-    io.to(roomName).emit('gameOver', { msg: `${winnerName} 승리! (+100P)`, winner: winnerName }); delete rooms[roomName]; io.emit('roomListUpdate', getRoomList());
+    io.to(roomName).emit('gameOver', { msg: `${winnerName} 승리! (+100P)`, winner: winnerName });
+    delete rooms[roomName]; io.emit('roomListUpdate', getRoomList());
     if(winner) { const u = await User.findOne({name: winner.name}); io.to(winner.id).emit('infoUpdate', {wins:u.wins, loses:u.loses, points:u.points}); }
     if(loser) { const u = await User.findOne({name: loser.name}); io.to(loser.id).emit('infoUpdate', {wins:u.wins, loses:u.loses, points:u.points}); }
     io.emit('rankingUpdate', await getRankingDB());
 }
+
 function getRoomList() { return Object.keys(rooms).map(key => ({ name: key, isLocked: !!rooms[key].password, count: rooms[key].players.length, isPlaying: rooms[key].isPlaying })); }
 async function getRankingDB() { try { return await User.find({ wins: { $gt: 0 } }).sort({ wins: -1 }).limit(5).select('name wins'); } catch { return []; } }
 function checkWin(board, x, y, stoneValue) {
