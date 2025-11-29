@@ -7,8 +7,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <button id="btn-bgm" onclick="toggleBgm()" class="bgm-toggle">🎵 BGM ON</button>
 </head>
 <body>
+    <audio id="bgm" src="bgm.mp3" loop></audio>
+
     <div id="login-screen" class="screen login-bg">
         <div class="dim-overlay"></div>
         <div class="glass-card">
@@ -83,9 +86,9 @@
             <div id="player-list" style="font-weight:bold; font-size:16px;"></div>
             
             <div class="game-controls">
-                <button id="btn-ready" onclick="toggleReady()" class="hidden" style="background:green; color:white;">準備</button>
-                <button id="btn-start" onclick="startGame()" class="hidden" style="background:blue; color:white;">開始</button>
-                <span id="spectator-msg" class="hidden" style="color:purple; font-weight:bold;">👀 觀戰 모드입니다</span>
+                <button id="btn-ready" onclick="toggleReady()" class="hidden" style="background:green; color:white;">준비</button>
+                <button id="btn-start" onclick="startGame()" class="hidden" style="background:blue; color:white;">시작</button>
+                <span id="spectator-msg" class="hidden" style="color:purple; font-weight:bold;">👀 관전 모드입니다</span>
                 <button onclick="leaveRoom()" class="exit-btn">나가기</button>
             </div>
         </div>
