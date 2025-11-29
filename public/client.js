@@ -21,23 +21,45 @@ let amIHost = false;
 let isSpectator = false;
 let lastStoneElement = null;
 
+// [NEW] BGM 및 활동 감지 변수
 let activityTimer;
 const PING_INTERVAL_MS = 10 * 60 * 1000;
+const bgm = document.getElementById('bgm');
+const btnBgm = document.getElementById('btn-bgm');
+bgm.volume = 0.2; 
 
+// 🔊 효과음
 const soundStone = new Audio('stone.mp3');
 const soundWin = new Audio('win.mp3');
 const soundLose = new Audio('lose.mp3');
 
+// [0] 자동 로그인
 window.onload = () => {
     const savedName = localStorage.getItem('omok-name');
     const savedPass = localStorage.getItem('omok-pass');
     if (savedName && savedPass) socket.emit('login', { name: savedName, password: savedPass });
 };
 
+// [BGM 토글 함수]
+function toggleBgm() {
+    if (bgm.paused) {
+        bgm.play().catch(e => console.log("BGM requires user interaction to play."));
+        btnBgm.innerText = "🎵 BGM ON";
+        btnBgm.classList.remove('bgm-off');
+    } else {
+        bgm.pause();
+        btnBgm.innerText = "🔇 BGM OFF";
+        btnBgm.classList.add('bgm-off');
+    }
+}
+
 function login() {
     const name = document.getElementById('username').value;
     const pass = document.getElementById('password').value;
     if (!name || !pass) return alert('입력해주세요.');
+    
+    bgm.play().catch(e => console.log("BGM requires user interaction to play."));
+
     socket.emit('login', { name, password: pass });
 }
 
@@ -66,6 +88,7 @@ socket.on('loginFail', (msg) => {
     document.getElementById('lobby-screen').classList.add('hidden');
 });
 
+// [NEW] 활동 감지 로직
 function setupActivityMonitoring() {
     ['mousemove', 'keydown', 'scroll', 'click'].forEach(eventType => {
         document.addEventListener(eventType, resetActivityTimer);
@@ -80,9 +103,10 @@ function resetActivityTimer() {
         resetActivityTimer(); 
     }, PING_INTERVAL_MS);
 }
-
 socket.on('force_logout', (message) => { alert(message); logout(); });
 
+
+// --- 기존 기능들 ---
 function updateUserInfo(data) {
     document.getElementById('user-hello').innerText = `안녕하세요, ${data.name}님!`;
     document.getElementById('user-points').innerText = `${data.points} P`;
@@ -135,19 +159,16 @@ function renderShopItems() {
         previewBox.style.gap = '5px';
         previewBox.style.marginBottom = '8px';
         
+        // [FIX] shop preview: class만 주고 size는 인라인으로 덮어씁니다.
         const blackStone = document.createElement('div');
         blackStone.className = `stone black ${item.id}`; 
         blackStone.style.width = '35px';
         blackStone.style.height = '35px';
-        blackStone.style.position = 'static';
-        blackStone.style.boxShadow = '1px 1px 3px rgba(0,0,0,0.3)';
 
         const whiteStone = document.createElement('div');
         whiteStone.className = `stone white ${item.id}`;
         whiteStone.style.width = '35px';
         whiteStone.style.height = '35px';
-        whiteStone.style.position = 'static';
-        whiteStone.style.boxShadow = '1px 1px 3px rgba(0,0,0,0.3)';
 
         previewBox.append(blackStone, whiteStone);
 
@@ -207,6 +228,7 @@ socket.on('shopUpdate', (data) => {
 socket.on('alert', (msg) => alert(msg));
 
 
+// --- 게임 및 대기실 로직 (생략하지 않음) ---
 socket.on('userListUpdate', (userList) => {
     onlineCountSpan.innerText = userList.length;
     onlineListDiv.innerText = userList.join(', ');
