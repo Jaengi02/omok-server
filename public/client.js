@@ -23,41 +23,47 @@ let lastStoneElement = null;
 
 let activityTimer;
 const PING_INTERVAL_MS = 10 * 60 * 1000;
-
-// [FIXED] BGM 변수를 미리 선언만 해둡니다. (null 방지)
 let bgm;
 let btnBgm;
 let soundStone;
 let soundWin;
 let soundLose;
 
-// -----------------------------------------------------------
-// [NEW] 돔 요소 초기화 함수: window.onload 때 호출됨
-// -----------------------------------------------------------
+
+window.onload = () => {
+    initializeDomElements();
+
+    const savedName = localStorage.getItem('omok-name');
+    const savedPass = localStorage.getItem('omok-pass');
+    if (savedName && savedPass) socket.emit('login', { name: savedName, password: savedPass });
+};
+
 function initializeDomElements() {
-    // [FIX] ID를 찾아 변수에 할당합니다.
     bgm = document.getElementById('bgm');
     btnBgm = document.getElementById('btn-bgm');
     
-    // [FIX] 이 초기화가 성공해야 볼륨 설정이 가능합니다.
     if (bgm) {
         bgm.volume = 0.2; 
     }
     
-    // [NEW] 효과음도 여기서 초기화 (오류 방지)
     soundStone = new Audio('stone.mp3');
     soundWin = new Audio('win.mp3');
     soundLose = new Audio('lose.mp3');
 }
 
-// [0] 자동 로그인
-window.onload = () => {
-    initializeDomElements(); // 👈 DOM 요소 먼저 초기화
+function toggleBgm() {
+    if (!bgm) return;
     
-    const savedName = localStorage.getItem('omok-name');
-    const savedPass = localStorage.getItem('omok-pass');
-    if (savedName && savedPass) socket.emit('login', { name: savedName, password: savedPass });
-};
+    if (bgm.paused) {
+        bgm.play().catch(e => console.log("BGM requires user interaction to play."));
+        btnBgm.innerText = "🎵 BGM ON";
+        btnBgm.classList.remove('bgm-off');
+    } else {
+        bgm.pause();
+        btnBgm.innerText = "🔇 BGM OFF";
+        btnBgm.classList.add('bgm-off');
+    }
+}
 
 function login() {
     const name = document.getElementById('username').value;
@@ -74,22 +80,6 @@ function logout() {
     localStorage.clear();
     location.reload();
 }
-
-// [BGM 토글 함수]
-function toggleBgm() {
-    if (!bgm) return; // 요소 없으면 무시
-    
-    if (bgm.paused) {
-        bgm.play().catch(e => console.log("BGM requires user interaction to play."));
-        btnBgm.innerText = "🎵 BGM ON";
-        btnBgm.classList.remove('bgm-off');
-    } else {
-        bgm.pause();
-        btnBgm.innerText = "🔇 BGM OFF";
-        btnBgm.classList.add('bgm-off');
-    }
-}
-
 
 socket.on('loginSuccess', (data) => {
     myName = data.name;
@@ -110,7 +100,6 @@ socket.on('loginFail', (msg) => {
     document.getElementById('lobby-screen').classList.add('hidden');
 });
 
-// [NEW] 활동 감지 로직
 function setupActivityMonitoring() {
     ['mousemove', 'keydown', 'scroll', 'click'].forEach(eventType => {
         document.addEventListener(eventType, resetActivityTimer);
@@ -125,7 +114,6 @@ function resetActivityTimer() {
         resetActivityTimer(); 
     }, PING_INTERVAL_MS);
 }
-
 socket.on('force_logout', (message) => { alert(message); logout(); });
 
 function updateUserInfo(data) {
