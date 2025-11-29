@@ -21,27 +21,64 @@ let amIHost = false;
 let isSpectator = false;
 let lastStoneElement = null;
 
-// [NEW] BGM 및 활동 감지 변수
 let activityTimer;
 const PING_INTERVAL_MS = 10 * 60 * 1000;
-const bgm = document.getElementById('bgm');
-const btnBgm = document.getElementById('btn-bgm');
-bgm.volume = 0.2; 
 
-// 🔊 효과음
-const soundStone = new Audio('stone.mp3');
-const soundWin = new Audio('win.mp3');
-const soundLose = new Audio('lose.mp3');
+// [FIXED] BGM 변수를 미리 선언만 해둡니다. (null 방지)
+let bgm;
+let btnBgm;
+let soundStone;
+let soundWin;
+let soundLose;
+
+// -----------------------------------------------------------
+// [NEW] 돔 요소 초기화 함수: window.onload 때 호출됨
+// -----------------------------------------------------------
+function initializeDomElements() {
+    // [FIX] ID를 찾아 변수에 할당합니다.
+    bgm = document.getElementById('bgm');
+    btnBgm = document.getElementById('btn-bgm');
+    
+    // [FIX] 이 초기화가 성공해야 볼륨 설정이 가능합니다.
+    if (bgm) {
+        bgm.volume = 0.2; 
+    }
+    
+    // [NEW] 효과음도 여기서 초기화 (오류 방지)
+    soundStone = new Audio('stone.mp3');
+    soundWin = new Audio('win.mp3');
+    soundLose = new Audio('lose.mp3');
+}
 
 // [0] 자동 로그인
 window.onload = () => {
+    initializeDomElements(); // 👈 DOM 요소 먼저 초기화
+    
     const savedName = localStorage.getItem('omok-name');
     const savedPass = localStorage.getItem('omok-pass');
     if (savedName && savedPass) socket.emit('login', { name: savedName, password: savedPass });
 };
 
+function login() {
+    const name = document.getElementById('username').value;
+    const pass = document.getElementById('password').value;
+    if (!name || !pass) return alert('입력해주세요.');
+    
+    if (bgm) bgm.play().catch(e => console.log("BGM requires user interaction to play."));
+
+    socket.emit('login', { name, password: pass });
+}
+
+function logout() {
+    clearTimeout(activityTimer);
+    localStorage.clear();
+    location.reload();
+}
+
 // [BGM 토글 함수]
 function toggleBgm() {
+    if (!bgm) return; // 요소 없으면 무시
+    
     if (bgm.paused) {
         bgm.play().catch(e => console.log("BGM requires user interaction to play."));
         btnBgm.innerText = "🎵 BGM ON";
@@ -53,21 +90,6 @@ function toggleBgm() {
     }
 }
 
-function login() {
-    const name = document.getElementById('username').value;
-    const pass = document.getElementById('password').value;
-    if (!name || !pass) return alert('입력해주세요.');
-    
-    bgm.play().catch(e => console.log("BGM requires user interaction to play."));
-
-    socket.emit('login', { name, password: pass });
-}
-
-function logout() {
-    clearTimeout(activityTimer);
-    localStorage.clear();
-    location.reload();
-}
 
 socket.on('loginSuccess', (data) => {
     myName = data.name;
@@ -103,10 +125,9 @@ function resetActivityTimer() {
         resetActivityTimer(); 
     }, PING_INTERVAL_MS);
 }
+
 socket.on('force_logout', (message) => { alert(message); logout(); });
 
-
-// --- 기존 기능들 ---
 function updateUserInfo(data) {
     document.getElementById('user-hello').innerText = `안녕하세요, ${data.name}님!`;
     document.getElementById('user-points').innerText = `${data.points} P`;
@@ -159,16 +180,17 @@ function renderShopItems() {
         previewBox.style.gap = '5px';
         previewBox.style.marginBottom = '8px';
         
-        // [FIX] shop preview: class만 주고 size는 인라인으로 덮어씁니다.
         const blackStone = document.createElement('div');
         blackStone.className = `stone black ${item.id}`; 
         blackStone.style.width = '35px';
         blackStone.style.height = '35px';
+        blackStone.style.boxShadow = '1px 1px 3px rgba(0,0,0,0.3)';
 
         const whiteStone = document.createElement('div');
         whiteStone.className = `stone white ${item.id}`;
         whiteStone.style.width = '35px';
         whiteStone.style.height = '35px';
+        whiteStone.style.boxShadow = '1px 1px 3px rgba(0,0,0,0.3)';
 
         previewBox.append(blackStone, whiteStone);
 
@@ -228,7 +250,6 @@ socket.on('shopUpdate', (data) => {
 socket.on('alert', (msg) => alert(msg));
 
 
-// --- 게임 및 대기실 로직 (생략하지 않음) ---
 socket.on('userListUpdate', (userList) => {
     onlineCountSpan.innerText = userList.length;
     onlineListDiv.innerText = userList.join(', ');
