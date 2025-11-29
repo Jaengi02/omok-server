@@ -11,35 +11,38 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static('public'));
 
 // ---------------------------------------------------------
-// 1. MongoDB 연결 및 스키마
+// [1] MongoDB 연결 설정
 // ---------------------------------------------------------
-// ▼▼▼ 비밀번호를 반드시 수정해 주세요! ▼▼▼
+// ▼▼▼ 비밀번호 수정 필수! ▼▼▼
 const MONGO_URI = "mongodb+srv://koojj321:abcd1234@cluster0.yh4yszy.mongodb.net/?appName=Cluster0";
 
 mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ DB 연결 성공!'))
     .catch(err => console.error('❌ DB 연결 실패:', err));
 
+// 유저 스키마
 const userSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     wins: { type: Number, default: 0 },
     loses: { type: Number, default: 0 },
-    points: { type: Number, default: 0 },
+    points: { type: Number, default: 0 }, // 신규 가입 시 0포인트
     items: { type: [String], default: ['default'] },
     equipped: { type: String, default: 'default' }
 });
 const User = mongoose.model('User', userSchema);
 
 // ---------------------------------------------------------
-// 2. 서버 메모리 데이터
+// [2] 서버 데이터 및 설정
 // ---------------------------------------------------------
 const BOARD_SIZE = 19;
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30분
+
 let rooms = {}; 
 let connectedUsers = {}; 
 let socketActivity = {}; 
-const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 
+// 1분마다 비활성 유저 검사
 setInterval(checkInactiveUsers, 60000); 
 
 function checkInactiveUsers() {
@@ -61,11 +64,12 @@ io.on('connection', (socket) => {
     let myRoom = null;
     let myName = null;
 
+    // 활동 감지 핑
     socket.on('activity_ping', () => {
         if (socketActivity[socket.id]) socketActivity[socket.id] = Date.now();
     });
 
-    // [1] 로그인
+    // [로그인]
     socket.on('login', async ({ name, password }) => {
         try {
             let user = await User.findOne({ name: name });
@@ -81,7 +85,14 @@ io.on('connection', (socket) => {
             connectedUsers[socket.id] = name;
             socketActivity[socket.id] = Date.now();
 
-            socket.emit('loginSuccess', { name, stats: { wins: user.wins, loses: user.loses }, points: user.points, items: user.items, equipped: user.equipped });
+            socket.emit('loginSuccess', { 
+                name, 
+                stats: { wins: user.wins, loses: user.loses },
+                points: user.points,
+                items: user.items,
+                equipped: user.equipped
+            });
+
             socket.emit('roomListUpdate', getRoomList());
             socket.emit('rankingUpdate', await getRankingDB());
             io.emit('userListUpdate', Object.values(connectedUsers));
@@ -92,23 +103,24 @@ io.on('connection', (socket) => {
         }
     });
 
-    // [2] 상점 기능
+    // [상점: 구매]
     socket.on('buyItem', async (itemId) => {
         const prices = { 'gold': 500, 'diamond': 1000, 'ruby': 2000 }; 
         const cost = prices[itemId];
         try {
             const user = await User.findOne({ name: myName });
             if (!user || user.items.includes(itemId) || user.points < cost) {
-                return socket.emit('alert', user ? (user.items.includes(itemId) ? '이미 보유' : '포인트 부족') : '로그인 필요');
+                return socket.emit('alert', user ? (user.items.includes(itemId) ? '이미 보유중' : '포인트 부족') : '로그인 필요');
             }
             user.points -= cost;
             user.items.push(itemId);
             await user.save();
             socket.emit('shopUpdate', { points: user.points, items: user.items, equipped: user.equipped });
-            socket.emit('alert', '구매 성공! 인벤토리에서 장착하세요.');
+            socket.emit('alert', '구매 성공!');
         } catch (e) { console.error(e); }
     });
 
+    // [상점: 장착]
     socket.on('equipItem', async (itemId) => {
         try {
             const user = await User.findOne({ name: myName });
@@ -120,16 +132,21 @@ io.on('connection', (socket) => {
         } catch (e) { console.error(e); }
     });
 
-    // [3] 방 관련 로직
+    // [대기실 채팅]
     socket.on('lobbyChat', (msg) => io.emit('lobbyChat', { sender: myName, msg }));
 
+    // [방 생성]
     socket.on('createRoom', ({ roomName, password }) => {
         if (rooms[roomName]) return socket.emit('error', '이미 존재하는 방입니다.');
-        rooms[roomName] = { password, players: [], spectators: [], board: Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null)), turn: 'black', timerId: null, timeLeft: 30, isPlaying: false, p2Ready: false };
+        rooms[roomName] = {
+            password, players: [], spectators: [], board: Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null)),
+            turn: 'black', timerId: null, timeLeft: 30, isPlaying: false, p2Ready: false
+        };
         joinRoomProcess(socket, roomName);
         io.emit('roomListUpdate', getRoomList());
     });
 
+    // [방 입장]
     socket.on('joinRoom', ({ roomName, password }) => {
         const room = rooms[roomName];
         if (!room) return socket.emit('error', '존재하지 않는 방입니다.');
@@ -151,7 +168,10 @@ io.on('connection', (socket) => {
             const isHost = room.players.length === 0;
             room.players.push({ id: socket.id, name: socket.myName, color, isHost, isSpectator: false, skin: mySkin });
             
-            socket.emit('roomJoined', { roomName, color, isHost, isSpectator: false, players: room.players, board: room.board });
+            socket.emit('roomJoined', { 
+                roomName, color, isHost, isSpectator: false, 
+                players: room.players, board: room.board 
+            });
 
             if (room.players.length === 2) io.to(roomName).emit('status', '준비되면 시작하세요.');
             else socket.emit('status', '대기중...');
@@ -163,7 +183,7 @@ io.on('connection', (socket) => {
         io.to(roomName).emit('updateRoomInfo', { players: room.players, spectators: room.spectators, p2Ready: room.p2Ready });
     }
 
-    // [4] 준비/시작/돌두기
+    // [준비]
     socket.on('toggleReady', () => {
         const room = rooms[myRoom];
         if (!room) return;
@@ -171,9 +191,9 @@ io.on('connection', (socket) => {
         if (!me || me.isHost) return;
         room.p2Ready = !room.p2Ready;
         io.to(myRoom).emit('updateRoomInfo', { players: room.players, spectators: room.spectators, p2Ready: room.p2Ready });
-        io.to(myRoom).emit('status', room.p2Ready ? '준비 완료! 방장님 시작하세요.' : '준비 취소.');
     });
 
+    // [시작]
     socket.on('startGame', () => {
         const room = rooms[myRoom];
         if (!room) return;
@@ -188,17 +208,15 @@ io.on('connection', (socket) => {
         startTimer(myRoom);
     });
 
+    // [돌 두기]
     socket.on('placeStone', ({ x, y }) => {
-        if (!myRoom || !rooms[myRoom]) return;
         const room = rooms[myRoom];
-        if (!room.isPlaying) return;
-
+        if (!room || !room.isPlaying) return;
         const me = room.players.find(p => p.id === socket.id);
         if (me.color !== room.turn || room.board[y][x] !== null) return;
 
         const stoneValue = `${me.color}:${me.skin}`;
         room.board[y][x] = stoneValue;
-        
         room.turn = room.turn === 'black' ? 'white' : 'black';
         
         io.to(myRoom).emit('updateBoard', { x, y, color: me.color, skin: me.skin });
@@ -211,41 +229,39 @@ io.on('connection', (socket) => {
         }
     });
 
-    // [5] 나가기 처리
+    // [게임 채팅]
     socket.on('chat', (msg) => { if (myRoom) io.to(myRoom).emit('chat', { sender: myName, msg }); });
+
+    // [나가기]
     socket.on('leaveRoom', () => handleDisconnect());
     socket.on('disconnect', () => handleDisconnect());
 
     function handleDisconnect() {
         if (socketActivity[socket.id]) delete socketActivity[socket.id];
         if (connectedUsers[socket.id]) delete connectedUsers[socket.id];
-
-        // 방 나가기 처리
-        for (const roomName in rooms) {
-            const room = rooms[roomName];
+        
+        if (myRoom && rooms[myRoom]) {
+            const room = rooms[myRoom];
             const specIndex = room.spectators.findIndex(s => s.id === socket.id);
-            if (specIndex !== -1) { // 관전자
+            if (specIndex !== -1) {
                 room.spectators.splice(specIndex, 1);
-                io.to(roomName).emit('updateRoomInfo', { players: room.players, spectators: room.spectators, p2Ready: room.p2Ready });
+                io.to(myRoom).emit('updateRoomInfo', { players: room.players, spectators: room.spectators, p2Ready: room.p2Ready });
                 return;
             }
-            const pIndex = room.players.findIndex(p => p.id === socket.id);
-            if (pIndex !== -1) { // 플레이어
-                stopTimer(roomName);
-                if (room.isPlaying) io.to(roomName).emit('gameOver', { msg: `${myName}님이 나갔습니다. 상대방 승리!`, winner: 'opponent' });
-                else {
-                    io.to(roomName).emit('error', '플레이어가 나가서 방이 폭파됩니다.');
-                    io.to(roomName).emit('forceLeave');
-                }
-                delete rooms[roomName];
-                io.emit('roomListUpdate', getRoomList());
+            stopTimer(myRoom);
+            if (room.isPlaying) io.to(myRoom).emit('gameOver', { msg: '상대방이 나갔습니다.', winner: 'opponent' });
+            else {
+                io.to(myRoom).emit('error', '방이 폭파되었습니다.');
+                io.to(myRoom).emit('forceLeave');
             }
+            delete rooms[myRoom];
+            io.emit('roomListUpdate', getRoomList());
         }
         io.emit('userListUpdate', Object.values(connectedUsers));
     }
 });
 
-// --- 타이머 및 게임 로직 ---
+// Helper Functions
 function startTimer(roomName) {
     const room = rooms[roomName];
     if(!room) return;
@@ -258,7 +274,7 @@ function startTimer(roomName) {
         if(room.timeLeft <= 0) {
             clearInterval(room.timerId);
             const winner = room.players.find(p => p.color !== room.turn);
-            if (winner) endGame(roomName, winner.name);
+            endGame(roomName, winner.name);
         }
     }, 1000);
 }

@@ -81,11 +81,10 @@
         <div class="game-header-bar">
             <h2 id="room-title" style="margin:0;">방 제목</h2>
             <div id="player-list" style="font-weight:bold; font-size:16px;"></div>
-            
             <div class="game-controls">
                 <button id="btn-ready" onclick="toggleReady()" class="hidden" style="background:green; color:white;">준비</button>
                 <button id="btn-start" onclick="startGame()" class="hidden" style="background:blue; color:white;">시작</button>
-                <span id="spectator-msg" class="hidden" style="color:purple; font-weight:bold;">👀 관전 모드입니다</span>
+                <span id="spectator-msg" class="hidden" style="color:purple; font-weight:bold;">👀 관전 모드</span>
                 <button onclick="leaveRoom()" class="exit-btn">나가기</button>
             </div>
         </div>
@@ -98,7 +97,6 @@
 
             <div class="game-sidebar">
                 <div id="timer-box" style="font-size:20px; font-weight:bold; color:red; margin-bottom:10px;">30</div>
-                
                 <div id="chat-container">
                     <div id="chat-messages"></div>
                     <div class="chat-input-box">
@@ -106,7 +104,6 @@
                         <button onclick="sendChat()">전송</button>
                     </div>
                 </div>
-
                 <div id="spectator-box">
                     <div style="font-weight:bold; border-bottom:1px solid #eee;">👀 관전자</div>
                     <div id="spectator-list"></div>
@@ -119,8 +116,7 @@
         <div class="shop-card">
             <h2>🛍️ 바둑알 상점</h2>
             <p>나의 포인트: <span id="shop-points" style="color:red; font-weight:bold;">0</span> P</p>
-            <div id="shop-items">
-                </div>
+            <div id="shop-items"></div>
             <button onclick="closeShop()" class="btn-close">닫기</button>
         </div>
     </div>
