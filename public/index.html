@@ -10,6 +10,8 @@
     <button id="btn-bgm" onclick="toggleBgm()" class="bgm-toggle">🎵 BGM ON</button>
 </head>
 <body>
+    <audio id="bgm" src="bgm.mp3" loop></audio>
+
     <div id="login-screen" class="screen login-bg">
         <div class="dim-overlay"></div>
         <div class="glass-card">
@@ -35,45 +37,15 @@
                     </div>
                 </div>
 
-                <div class="box-style">
-                    <h3>🏆 명예의 전당 (TOP 5)</h3>
-                    <div id="ranking-list">불러오는 중...</div>
-                </div>
-
-                <div class="box-style">
-                    <h3>🏠 방 만들기</h3>
-                    <input type="text" id="create-room-name" placeholder="방 제목">
-                    <input type="text" id="create-room-pass" placeholder="비밀번호(선택)">
-                    <button onclick="createRoom()">생성</button>
-                </div>
-
-                <div class="box-style" style="min-height: 200px;">
-                    <h3>📋 방 목록</h3>
-                    <div id="room-list">방이 없습니다.</div>
-                </div>
+                <div class="box-style"><h3>🏆 명예의 전당 (TOP 5)</h3><div id="ranking-list">불러오는 중...</div></div>
+                <div class="box-style"><h3>🏠 방 만들기</h3><input type="text" id="create-room-name" placeholder="방 제목"><input type="text" id="create-room-pass" placeholder="비밀번호(선택)"><button onclick="createRoom()">생성</button></div>
+                <div class="box-style" style="min-height: 200px;"><h3>📋 방 목록</h3><div id="room-list">방이 없습니다.</div></div>
             </div>
 
             <div class="lobby-side">
-                <div class="box-style">
-                    <h3 style="margin-top:0;">내 정보</h3>
-                    <div id="user-hello" style="font-size:18px;"></div>
-                    <div id="user-points" style="color:#d35400; font-weight:bold;"></div>
-                    <div id="user-stats" style="color:blue;"></div>
-                </div>
-
-                <div class="box-style">
-                    <h3>🟢 접속자 (<span id="online-count">0</span>명)</h3>
-                    <div id="online-user-list" style="height:80px; overflow-y:auto; font-size:13px; color:#555;"></div>
-                </div>
-
-                <div class="box-style">
-                    <h3>💬 만남의 광장</h3>
-                    <div id="lobby-chat-box" style="height:200px; overflow-y:auto; margin-bottom:5px; padding:5px; text-align:left; font-size:13px;"></div>
-                    <div style="display:flex;">
-                        <input type="text" id="lobby-chat-input" placeholder="대화하기..." style="flex:1; margin:0;" onkeypress="if(event.keyCode==13) sendLobbyChat()">
-                        <button onclick="sendLobbyChat()" style="margin:0;">전송</button>
-                    </div>
-                </div>
+                <div class="box-style"><h3 style="margin-top:0;">내 정보</h3><div id="user-hello" style="font-size:18px;"></div><div id="user-points" style="color:#d35400; font-weight:bold;"></div><div id="user-stats" style="color:blue;"></div></div>
+                <div class="box-style"><h3>🟢 접속자 (<span id="online-count">0</span>명)</h3><div id="online-user-list" style="height:80px; overflow-y:auto; font-size:13px; color:#555;"></div></div>
+                <div class="box-style"><h3>💬 만남의 광장</h3><div id="lobby-chat-box" style="height:200px; overflow-y:auto; margin-bottom:5px; padding:5px; text-align:left; font-size:13px;"></div><div style="display:flex;"><input type="text" id="lobby-chat-input" placeholder="대화하기..." style="flex:1; margin:0;" onkeypress="if(event.keyCode==13) sendLobbyChat()"><button onclick="sendLobbyChat()" style="margin:0;">전송</button></div></div>
             </div>
         </div>
     </div>
