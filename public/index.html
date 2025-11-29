@@ -4,16 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>오목 온라인</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="login-screen" class="screen" style="max-width:400px; margin: 50px auto; padding:20px; background:white; border-radius:10px;">
-        <h1>오목 온라인</h1>
-        <p>닉네임과 비밀번호를 입력하세요.</p>
-        <input type="text" id="username" placeholder="닉네임" autofocus style="width:90%">
-        <input type="password" id="password" placeholder="비밀번호" style="width:90%">
-        <br><br>
-        <button onclick="login()" style="width:95%">접속하기</button>
+    <div id="login-screen" class="screen login-bg">
+        
+        <div class="dim-overlay"></div>
+        
+        <div class="glass-card">
+            <h1 class="game-title">OMOK</h1>
+            <p class="game-subtitle">신비로운 전략의 세계</p>
+            
+            <div class="input-container">
+                <input type="text" id="username" placeholder="닉네임 (Nickname)" autofocus>
+                <input type="password" id="password" placeholder="비밀번호 (Password)">
+            </div>
+            
+            <button class="btn-login" onclick="login()">GAME START</button>
+            <p class="copyright">© 2025 Omok Project</p>
+        </div>
     </div>
 
     <div id="lobby-screen" class="hidden">
@@ -49,7 +60,7 @@
                 <div class="box-style" style="background:#e8f5e9;">
                     <h3 style="margin-top:0;">내 정보</h3>
                     <div id="user-hello" style="font-size:18px;"></div>
-                    <div id="user-points" style="color:#d35400; font-weight:bold;">0 P</div>
+                    <div id="user-points" style="color:#d35400; font-weight:bold;"></div>
                     <div id="user-stats" style="color:blue;"></div>
                 </div>
 
@@ -78,7 +89,7 @@
             <div class="game-controls">
                 <button id="btn-ready" onclick="toggleReady()" class="hidden" style="background:green; color:white;">준비</button>
                 <button id="btn-start" onclick="startGame()" class="hidden" style="background:blue; color:white;">시작</button>
-                <span id="spectator-msg" class="hidden" style="color:purple; font-weight:bold;">관전중</span>
+                <span id="spectator-msg" class="hidden" style="color:purple; font-weight:bold;">👀 관전 모드입니다</span>
                 <button onclick="leaveRoom()" class="exit-btn">나가기</button>
             </div>
         </div>
@@ -108,13 +119,13 @@
         </div>
     </div>
 
-    <div id="shop-modal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center;">
-        <div style="background:white; padding:20px; border-radius:10px; width:400px; text-align:center;">
+    <div id="shop-modal" class="hidden">
+        <div class="shop-card">
             <h2>🛍️ 바둑알 상점</h2>
             <p>나의 포인트: <span id="shop-points" style="color:red; font-weight:bold;">0</span> P</p>
-            <div id="shop-items" style="display:flex; gap:10px; justify-content:center; margin:20px 0;">
+            <div id="shop-items">
                 </div>
-            <button onclick="closeShop()" style="background:#333; color:white;">닫기</button>
+            <button onclick="closeShop()" class="btn-close">닫기</button>
         </div>
     </div>
 
