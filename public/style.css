@@ -163,21 +163,24 @@ button {
     display: flex; justify-content: center; align-items: center; 
 }
 
+/* 가로선 (더 밝고 선명하게 수정됨) */
 .cell::before { 
     content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 2px;
-    /* 중앙이 밝은 그라데이션 빛 */
-    background: linear-gradient(90deg, rgba(255,160,0,0.1) 0%, rgba(255,210,100,0.8) 50%, rgba(255,160,0,0.1) 100%);
+    /* 중앙이 밝은 그라데이션 빛 (양끝 투명도 증가, 중앙 밝기 증가) */
+    background: linear-gradient(90deg, rgba(255,180,50,0.3) 0%, rgba(255,230,150,0.9) 50%, rgba(255,180,50,0.3) 100%);
     /* 나무 질감과 자연스럽게 섞임 */
     mix-blend-mode: overlay;
-    box-shadow: 0 0 4px rgba(255, 200, 50, 0.5);
+    /* 빛 번짐 강화 */
+    box-shadow: 0 0 5px rgba(255, 210, 80, 0.7);
     z-index: 0; 
 }
 
+/* 세로선 (더 밝고 선명하게 수정됨) */
 .cell::after { 
     content: ''; position: absolute; left: 50%; top: 0; height: 100%; width: 2px;
-    background: linear-gradient(180deg, rgba(255,160,0,0.1) 0%, rgba(255,210,100,0.8) 50%, rgba(255,160,0,0.1) 100%);
+    background: linear-gradient(180deg, rgba(255,180,50,0.3) 0%, rgba(255,230,150,0.9) 50%, rgba(255,180,50,0.3) 100%);
     mix-blend-mode: overlay;
-    box-shadow: 0 0 4px rgba(255, 200, 50, 0.5);
+    box-shadow: 0 0 5px rgba(255, 210, 80, 0.7);
     z-index: 0; 
 }
 
