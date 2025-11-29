@@ -1,9 +1,6 @@
-/* =========================================
-   1. 기본 설정 (폰트, 배경, 버튼)
-   ========================================= */
+/* 기본 설정 */
 body { 
     text-align: center; 
-    /* 사이트 전체 배경: 마법사 실험실 타일 */
     background-image: url('/images/lab_bg_tile.jpg'); 
     background-repeat: repeat; 
     background-attachment: fixed;
@@ -14,104 +11,14 @@ body {
     overflow-x: hidden;
     -webkit-backdrop-filter: blur(15px);
 }
-
 .hidden { display: none !important; }
+button { padding: 8px 15px; border: none; border-radius: 5px; font-weight: bold; transition: all 0.2s; cursor: pointer; }
+input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #666; background: rgba(0, 0, 0, 0.2); color: white; }
 
-/* 공통 입력창 스타일 */
-input { 
-    padding: 10px; margin: 5px; 
-    border-radius: 5px; border: 1px solid #666; 
-    background: rgba(0, 0, 0, 0.2); color: white; 
-}
-
-/* 공통 버튼 스타일 */
-button { 
-    padding: 8px 15px; 
-    border: none; border-radius: 5px; 
-    font-weight: bold; cursor: pointer;
-    transition: all 0.2s; 
-}
-
-/* =========================================
-   2. 로그인 화면 (애니메이션 & 글래스모피즘)
-   ========================================= */
-.login-bg {
-    /* PC 배경 이미지 */
-    background-image: url('/images/bg_pc.jpg');
-    background-size: cover; background-position: center; background-repeat: no-repeat;
-    width: 100vw; height: 100vh;
-    display: flex; justify-content: center; align-items: center; 
-    position: relative;
-}
-
-/* 어둠의 막 (Dimming Animation) */
-.dim-overlay { 
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-    background-color: black; opacity: 0; 
-    animation: fadeToDark 2s ease-out forwards; 
-    animation-delay: 0.8s; z-index: 1; 
-}
-
-/* 유리 카드 (로그인 창) */
-.glass-card { 
-    background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(20px); 
-    border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; 
-    padding: 60px 40px; width: 90%; max-width: 420px; text-align: center; 
-    box-shadow: 0 0 40px rgba(255, 215, 0, 0.1); 
-    position: relative; z-index: 10; opacity: 0; 
-    transform: translateY(30px); 
-    animation: slideUpFade 2s ease-out forwards; 
-    animation-delay: 0.8s; 
-}
-
-.game-title { 
-    font-size: 52px; color: white; margin: 0 0 10px 0; 
-    text-shadow: 0 0 15px rgba(255, 255, 255, 0.8); letter-spacing: 2px; 
-}
-.game-subtitle { 
-    color: rgba(255, 255, 255, 0.6); margin-bottom: 50px; 
-    font-size: 16px; font-weight: lighter; 
-}
-
-/* 로그인 입력창 */
-.input-container input { 
-    width: 100%; padding: 18px; margin-bottom: 15px; 
-    background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); 
-    border-radius: 12px; font-size: 16px; color: white; outline: none; transition: 0.3s; 
-}
-.input-container input:focus { 
-    border-color: rgba(255, 215, 0, 0.5); 
-    box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); 
-}
-.input-container input::placeholder { color: rgba(255, 255, 255, 0.3); }
-
-/* 로그인 버튼 (황금색) */
-.btn-login { 
-    width: 100%; padding: 18px; margin-top: 20px; border-radius: 50px; 
-    background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); 
-    color: #3a1c00; font-size: 20px; font-weight: 900; 
-    box-shadow: 0 0 25px rgba(255, 140, 0, 0.8); 
-}
-.btn-login:hover { 
-    transform: translateY(-3px) scale(1.02); 
-    box-shadow: 0 0 40px rgba(255, 215, 0, 1); 
-    background: linear-gradient(135deg, #ffe033 0%, #ff9900 100%); 
-}
-.copyright { margin-top: 40px; color: rgba(255, 255, 255, 0.2); font-size: 12px; }
-
-/* 애니메이션 동작 */
-@keyframes fadeToDark { from { opacity: 0; } to { opacity: 0.6; } }
-@keyframes slideUpFade { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-
-
-/* =========================================
-   3. 대기실 (Lobby) UI
-   ========================================= */
+/* 대기실 레이아웃 */
 .lobby-container { display: flex; max-width: 1200px; margin: 0 auto; padding: 20px; gap: 20px; align-items: flex-start; }
 .lobby-main { flex: 2; display: flex; flex-direction: column; gap: 15px; }
 .lobby-side { flex: 1; display: flex; flex-direction: column; gap: 15px; min-width: 300px; }
-
-/* 정보 박스 스타일 (다크 글래스) */
 .box-style { 
     background: rgba(45, 45, 65, 0.8); backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.15); padding: 15px; border-radius: 10px; 
@@ -120,102 +27,63 @@ button {
 .room-item { border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding: 12px; cursor: pointer; display: flex; justify-content: space-between; }
 .room-item:hover { background-color: rgba(0, 0, 0, 0.3); }
 
-
-/* =========================================
-   4. 게임 화면 UI
-   ========================================= */
-#game-screen { max-width: 1000px; margin: 20px auto; padding: 0 10px; }
-
-.game-header-bar { 
-    background: rgba(45, 45, 65, 0.8); color: #f0f0f0; 
-    padding: 10px 20px; border-radius: 10px; margin-bottom: 20px; 
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3); 
-    display: flex; justify-content: space-between; align-items: center; 
+/* 로그인 화면 */
+.login-bg {
+    background-image: url('/images/bg_pc.jpg');
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+    width: 100vw; height: 100vh;
+    display: flex; justify-content: center; align-items: center; position: relative;
 }
-.game-controls { display: flex; gap: 10px; align-items: center; }
+.dim-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: black; opacity: 0; animation: fadeToDark 2s ease-out forwards; animation-delay: 0.8s; z-index: 1; }
+.glass-card { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 60px 40px; width: 90%; max-width: 420px; text-align: center; box-shadow: 0 0 40px rgba(255, 215, 0, 0.1); position: relative; z-index: 10; opacity: 0; transform: translateY(30px); animation: slideUpFade 2s ease-out forwards; animation-delay: 0.8s; }
+.game-title { font-size: 52px; color: white; margin: 0 0 10px 0; text-shadow: 0 0 15px rgba(255, 255, 255, 0.8); letter-spacing: 2px; }
+.game-subtitle { color: rgba(255, 255, 255, 0.6); margin-bottom: 50px; font-size: 16px; font-weight: lighter; }
+.input-container input { width: 100%; padding: 18px; margin-bottom: 15px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; font-size: 16px; color: white; outline: none; transition: 0.3s; }
+.input-container input:focus { border-color: rgba(255, 215, 0, 0.5); box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
+.btn-login { width: 100%; padding: 18px; margin-top: 20px; border-radius: 50px; background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); color: #3a1c00; font-size: 20px; font-weight: 900; box-shadow: 0 0 25px rgba(255, 140, 0, 0.8); }
+.btn-login:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 0 40px rgba(255, 215, 0, 1); background: linear-gradient(135deg, #ffe033 0%, #ff9900 100%); }
+.copyright { margin-top: 40px; color: rgba(255, 255, 255, 0.2); font-size: 12px; }
 
+/* 애니메이션 동작 */
+@keyframes fadeToDark { from { opacity: 0; } to { opacity: 0.6; } }
+@keyframes slideUpFade { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+
+/* 게임방 UI */
+.game-header-bar { background: rgba(45, 45, 65, 0.8); color: #f0f0f0; padding: 10px 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; justify-content: space-between; align-items: center; }
+.game-controls { display: flex; gap: 10px; align-items: center; }
 #game-layout { display: flex; justify-content: center; gap: 20px; align-items: flex-start; }
 .board-area { display: flex; flex-direction: column; align-items: center; }
 
-/* --------------------------------------
-   [UPDATED] 오목판 (19x19) 디자인
-   -------------------------------------- */
+/* 오목판 (19x19) */
 #board {
-    /* 오목판 표면 이미지 */
     background-image: url('/images/mystic_wood.jpg'); 
-    background-color: #333; 
-    background-size: cover;
-    background-position: center;
-    
-    /* 보드 외곽 빛 효과 */
+    background-color: #333; background-size: cover; background-position: center;
     box-shadow: 0 0 30px rgba(255, 140, 0, 0.4); 
-    
     width: 650px; height: 650px;
     border: 5px solid #000;
     display: grid; grid-template-columns: repeat(19, 1fr);
-    padding: 15px; box-sizing: border-box;
-    border-radius: 5px;
+    padding: 15px; box-sizing: border-box; border-radius: 5px;
 }
+.cell { position: relative; width: 100%; height: 100%; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+.cell::before { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, rgba(255,180,50,0.3) 0%, rgba(255,230,150,0.9) 50%, rgba(255,180,50,0.3) 100%); mix-blend-mode: overlay; box-shadow: 0 0 5px rgba(255, 210, 80, 0.7); z-index: 0; }
+.cell::after { content: ''; position: absolute; left: 50%; top: 0; height: 100%; width: 2px; background: linear-gradient(180deg, rgba(255,180,50,0.3) 0%, rgba(255,230,150,0.9) 50%, rgba(255,180,50,0.3) 100%); mix-blend-mode: overlay; box-shadow: 0 0 5px rgba(255, 210, 80, 0.7); z-index: 0; }
 
-/* [NEW] 선 스타일: 나무에 새겨져 은은하게 빛나는 효과 (블렌딩 모드 적용) */
-.cell { 
-    position: relative; width: 100%; height: 100%; cursor: pointer; 
-    display: flex; justify-content: center; align-items: center; 
-}
-
-/* 가로선 (더 밝고 선명하게 수정됨) */
-.cell::before { 
-    content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 2px;
-    /* 중앙이 밝은 그라데이션 빛 (양끝 투명도 증가, 중앙 밝기 증가) */
-    background: linear-gradient(90deg, rgba(255,180,50,0.3) 0%, rgba(255,230,150,0.9) 50%, rgba(255,180,50,0.3) 100%);
-    /* 나무 질감과 자연스럽게 섞임 */
-    mix-blend-mode: overlay;
-    /* 빛 번짐 강화 */
-    box-shadow: 0 0 5px rgba(255, 210, 80, 0.7);
-    z-index: 0; 
-}
-
-/* 세로선 (더 밝고 선명하게 수정됨) */
-.cell::after { 
-    content: ''; position: absolute; left: 50%; top: 0; height: 100%; width: 2px;
-    background: linear-gradient(180deg, rgba(255,180,50,0.3) 0%, rgba(255,230,150,0.9) 50%, rgba(255,180,50,0.3) 100%);
-    mix-blend-mode: overlay;
-    box-shadow: 0 0 5px rgba(255, 210, 80, 0.7);
-    z-index: 0; 
-}
-
-/* 기본 돌 디자인 */
+/* 돌 & 스킨 */
 .stone { width: 90%; height: 90%; border-radius: 50%; box-shadow: 1px 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 10; }
 .stone.black { background: radial-gradient(circle at 35% 35%, #666, #000); }
 .stone.white { background: radial-gradient(circle at 35% 35%, #fff, #ddd); }
-
-/* 스킨 디자인 (흑/백 구분) */
 .stone.black.gold { background: radial-gradient(circle at 30% 30%, #ffd700, #5c4d00); box-shadow: 0 0 5px #000; border: 1px solid #333; }
 .stone.white.gold { background: radial-gradient(circle at 30% 30%, #ffec8b, #daa520); box-shadow: 0 0 5px #fff; border: 1px solid #fff; }
-.stone.black.diamond { background: radial-gradient(circle at 30% 30%, #00ced1, #004d4d); box-shadow: 0 0 5px #000; }
-.stone.white.diamond { background: radial-gradient(circle at 30% 30%, #e0ffff, #40e0d0); box-shadow: 0 0 5px #fff; }
-.stone.black.ruby { background: radial-gradient(circle at 30% 30%, #ff0000, #3a0000); box-shadow: 0 0 5px #000; }
-.stone.white.ruby { background: radial-gradient(circle at 30% 30%, #ff9999, #ff0000); box-shadow: 0 0 5px #fff; }
-
-/* 마지막 수 표시 (빨간 점) */
 .last-move::after { content: ''; position: absolute; top: 50%; left: 50%; width: 20%; height: 20%; background: red; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 2px white; }
-
 
 /* 오른쪽 사이드바 */
 .game-sidebar { width: 300px; display: flex; flex-direction: column; gap: 10px; }
-#chat-container { 
-    height: 400px; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(5px); 
-    border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; border-radius: 5px; 
-}
+#chat-container { height: 400px; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; border-radius: 5px; }
 #chat-messages { flex: 1; padding: 10px; overflow-y: auto; text-align: left; background: rgba(0, 0, 0, 0.1); color: #f0f0f0; }
-.chat-msg b { color: #fff; }
 .chat-input-box { display: flex; border-top: 1px solid rgba(255, 255, 255, 0.1); }
 #chat-input { flex: 1; border: none; margin: 0; padding: 10px; background: transparent; color: white; }
-#spectator-box { 
-    height: 150px; background: rgba(45, 45, 65, 0.8); color: #f0f0f0; 
-    border: 1px solid rgba(255, 255, 255, 0.1); overflow-y: auto; padding: 10px; border-radius: 5px; 
-}
-.exit-btn { background: #ff6b6b; color: white; box-shadow: none; }
+#spectator-box { height: 150px; background: rgba(45, 45, 65, 0.8); color: #f0f0f0; border: 1px solid rgba(255, 255, 255, 0.1); overflow-y: auto; padding: 10px; border-radius: 5px; }
 
 /* 상점 모달 */
 #shop-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; justify-content:center; align-items:center; z-index: 100; }
