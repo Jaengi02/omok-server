@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="style.css">
     
     <button id="btn-bgm" onclick="toggleBgm()" class="bgm-toggle">🎵 BGM ON</button>
-    <button id="btn-theme-toggle" onclick="toggleTheme()" class="bgm-toggle" style="right: 80px;">🌙 Dark Mode</button>
+    <button id="btn-theme-toggle" onclick="toggleTheme()" class="bgm-toggle theme-btn">🌙 Dark Mode</button>
 </head>
 <body>
     <audio id="bgm" src="bgm.mp3" loop></audio>
@@ -67,7 +67,7 @@
 
                 <div class="box-style">
                     <h3>🟢 접속자 (<span id="online-count">0</span>명)</h3>
-                    <div id="online-user-list" style="height:80px; overflow-y:auto; font-size:13px; color:#555;"></div>
+                    <div id="online-user-list" style="height:80px; overflow-y:auto; font-size:13px;"></div>
                 </div>
 
                 <div class="box-style">
@@ -90,14 +90,14 @@
             <div class="game-controls">
                 <button id="btn-ready" onclick="toggleReady()" class="hidden" style="background:green; color:white;">준비</button>
                 <button id="btn-start" onclick="startGame()" class="hidden" style="background:blue; color:white;">시작</button>
-                <span id="spectator-msg" class="hidden" style="color:purple; font-weight:bold;">👀 관전 모드입니다</span>
+                <span id="spectator-msg" class="hidden" style="color:purple; font-weight:bold;">👀 관전 모드</span>
                 <button onclick="leaveRoom()" class="exit-btn">나가기</button>
             </div>
         </div>
 
         <div id="game-layout">
             <div class="board-area">
-                <div id="status" style="margin-bottom:5px; height:20px;">대기중...</div> 
+                <div id="status" style="margin-bottom:5px; height:20px;">대기중...</div>
                 <div id="board"></div>
             </div>
 
@@ -122,7 +122,7 @@
 
     <div id="shop-modal" class="hidden">
         <div class="shop-card">
-            <h2 style="margin-top:0;">🛍️ 상점</h2>
+            <h2 style="margin-top:0;">🛍️ 바둑알 상점</h2>
             <p style="font-size: 1.1em; color: #e74c3c;">서비스 준비 중입니다.</p>
             <p style="color:var(--text-color);">더 멋진 스킨을 가지고 곧 돌아오겠습니다!</p>
             <button onclick="closeShop()" class="btn-close" style="margin-top: 20px;">닫기</button>
