@@ -31,7 +31,7 @@ let soundLose;
 
 
 window.onload = () => {
-    initializeTheme(); // [NEW] 테마 초기화
+    initializeTheme(); // [FIX: 테마 초기화 함수 확인]
     initializeDomElements();
 
     const savedName = localStorage.getItem('omok-name');
@@ -52,7 +52,7 @@ function initializeDomElements() {
     soundLose = new Audio('lose.mp3');
 }
 
-// [NEW] 테마 초기화 및 토글
+// [FIX: 테마 초기화 함수]
 function initializeTheme() {
     const root = document.documentElement;
     const savedTheme = localStorage.getItem('theme') || 'dark'; // 기본 테마는 다크 모드
@@ -66,6 +66,7 @@ function initializeTheme() {
     });
 }
 
+// [FIX: 테마 토글 함수]
 function toggleTheme() {
     const root = document.documentElement;
     const currentTheme = root.getAttribute('data-theme');
@@ -157,14 +158,12 @@ function closeShop() {
 }
 
 function renderShopItems() { 
-    // 이 함수는 현재 상점 비활성화로 인해 사용되지 않지만, 구조 유지를 위해 남겨둡니다.
     const items = [
         { id: 'default', name: '기본돌', price: 0 },
         { id: 'gold', name: '황금돌', price: 500 },
         { id: 'diamond', name: '다이아', price: 1000 },
         { id: 'ruby', name: '루비', price: 2000 }
     ];
-    // ... (이하 생략) ...
 }
 
 socket.on('shopUpdate', (data) => {
@@ -172,7 +171,6 @@ socket.on('shopUpdate', (data) => {
     document.getElementById('shop-points').innerText = data.points;
     window.myItems = data.items;
     window.myEquipped = data.equipped;
-    // renderShopItems(); // 비활성화 상태이므로 호출하지 않음
 });
 socket.on('alert', (msg) => alert(msg));
 
