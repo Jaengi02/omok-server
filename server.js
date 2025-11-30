@@ -13,7 +13,7 @@ app.use(express.static('public'));
 // ---------------------------------------------------------
 // 1. MongoDB 연결 및 스키마
 // ---------------------------------------------------------
-const MONGO_URI = "mongodb+srv://koojj321:여기에비밀번호입력@cluster0.yh4yszy.mongodb.net/?appName=Cluster0";
+const MONGO_URI = "mongodb+srv://koojj321:abcd1234@cluster0.yh4yszy.mongodb.net/?appName=Cluster0";
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 
 mongoose.connect(MONGO_URI)
@@ -62,7 +62,6 @@ io.on('connection', (socket) => {
 
     socket.on('activity_ping', () => { if (socketActivity[socket.id]) socketActivity[socket.id] = Date.now(); });
 
-    // [로그인/상점/게임 컨트롤 로직은 이전과 동일하게 유지]
     socket.on('login', async ({ name, password }) => {
         try {
             let user = await User.findOne({ name: name });
