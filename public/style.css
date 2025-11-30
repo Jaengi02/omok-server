@@ -1,8 +1,25 @@
+/* public/style.css - 파일 맨 위에 추가 */
+:root {
+    --bg-color: #f4f4f4; /* Light Mode: 밝은 회색 배경 */
+    --text-color: #333; /* Light Mode: 어두운 글자 */
+    --box-bg: white; /* Light Mode: 흰색 박스 */
+    --box-border: #ddd;
+    --input-bg: white;
+    --modal-bg: white;
+}
+:root[data-theme='dark'] {
+    --bg-color: #2c2c3e; /* Dark Mode: 소프트 다크 블루 */
+    --text-color: #f0f0f0; /* Dark Mode: 밝은 글자 */
+    --box-bg: #3a3a4e; /* Dark Mode: 진한 회색 박스 */
+    --box-border: #555;
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --modal-bg: #2c2c3e;
+}
 /* 기본 설정 */
 body { 
     text-align: center; 
-    background-color: #f4f4f4; /* 밝은 기본 배경 */
-    color: #333; 
+    background-color: var(--bg-color); /* 변수 적용 */
+    color: var(--text-color); /* 변수 적용 */
     font-family: 'Jua', sans-serif; 
     margin: 0; padding: 0; 
     overflow-x: hidden;
@@ -41,11 +58,12 @@ input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; 
 .lobby-main { flex: 2; display: flex; flex-direction: column; gap: 15px; }
 .lobby-side { flex: 1; display: flex; flex-direction: column; gap: 15px; min-width: 300px; }
 .box-style { 
-    /* 단순 흰색 박스로 복구 */
-    background: white; border: 1px solid #ddd; padding: 15px; border-radius: 10px; 
+    background: var(--box-bg) !important; 
+    border: 1px solid var(--box-border); 
+    padding: 15px; border-radius: 10px; 
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); 
-    text-align: left; 
-    color: #333 !important; /* 글자색 검은색으로 고정 */
+    color: var(--text-color) !important; /* 글자색 변수 적용 */
+    text-align: left;
 }
 .room-item { border-bottom: 1px solid #eee; padding: 12px; cursor: pointer; display: flex; justify-content: space-between; }
 .room-item:hover { background-color: #f9f9f9; }
@@ -96,7 +114,12 @@ input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; 
 
 /* 상점 모달 */
 #shop-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; justify-content:center; align-items:center; z-index: 100; }
-.shop-card { background:white; padding:20px; border-radius:10px; width:450px; text-align:center; box-shadow: 0 5px 15px rgba(0,0,0,0.5); color: #333; }
+.shop-card { 
+    background: var(--modal-bg); 
+    color: var(--text-color) !important; /* 상점 글자색 */
+    padding:20px; border-radius:10px; width:450px; text-align:center; 
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5); 
+}
 #shop-items { display:flex; flex-wrap: wrap; gap:15px; justify-content:center; margin:20px 0; }
 
 /* 모바일 반응형 */
@@ -108,3 +131,4 @@ input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; 
     #board { width: 95vw; height: 95vw; padding: 5px; }
     .game-sidebar { width: 95vw; }
 }
+
