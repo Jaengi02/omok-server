@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    
     <button id="btn-bgm" onclick="toggleBgm()" class="bgm-toggle">🎵 BGM ON</button>
     <button id="btn-theme-toggle" onclick="toggleTheme()" class="bgm-toggle theme-btn">🌙 Dark Mode</button>
 </head>
@@ -49,6 +48,7 @@
                     <input type="text" id="create-room-name" placeholder="방 제목">
                     <input type="text" id="create-room-pass" placeholder="비밀번호(선택)">
                     <button onclick="createRoom()">생성</button>
+                    <button onclick="openAiModal()" style="background:#27ae60; color:white; margin-left:10px;">🤖 AI 대결</button>
                 </div>
 
                 <div class="box-style" style="min-height: 200px;">
@@ -67,7 +67,7 @@
 
                 <div class="box-style">
                     <h3>🟢 접속자 (<span id="online-count">0</span>명)</h3>
-                    <div id="online-user-list" style="height:80px; overflow-y:auto; font-size:13px;"></div>
+                    <div id="online-user-list" style="height:80px; overflow-y:auto; font-size:13px; color:#555;"></div>
                 </div>
 
                 <div class="box-style">
@@ -86,24 +86,20 @@
         <div class="game-header-bar">
             <h2 id="room-title" style="margin:0;">방 제목</h2>
             <div id="player-list" style="font-weight:bold; font-size:16px;"></div>
-            
             <div class="game-controls">
                 <button id="btn-ready" onclick="toggleReady()" class="hidden" style="background:green; color:white;">준비</button>
                 <button id="btn-start" onclick="startGame()" class="hidden" style="background:blue; color:white;">시작</button>
-                <span id="spectator-msg" class="hidden" style="color:purple; font-weight:bold;">👀 관전 모드</span>
+                <span id="spectator-msg" class="hidden" style="color:purple; font-weight:bold;">👀 관전 모드입니다</span>
                 <button onclick="leaveRoom()" class="exit-btn">나가기</button>
             </div>
         </div>
-
         <div id="game-layout">
             <div class="board-area">
                 <div id="status" style="margin-bottom:5px; height:20px;">대기중...</div>
                 <div id="board"></div>
             </div>
-
             <div class="game-sidebar">
                 <div id="timer-box" style="font-size:20px; font-weight:bold; color:red; margin-bottom:10px;">30</div>
-                
                 <div id="chat-container">
                     <div id="chat-messages"></div>
                     <div class="chat-input-box">
@@ -111,7 +107,6 @@
                         <button onclick="sendChat()">전송</button>
                     </div>
                 </div>
-
                 <div id="spectator-box">
                     <div style="font-weight:bold; border-bottom:1px solid #eee;">👀 관전자</div>
                     <div id="spectator-list"></div>
@@ -122,10 +117,23 @@
 
     <div id="shop-modal" class="hidden">
         <div class="shop-card">
-            <h2 style="margin-top:0;">🛍️ 바둑알 상점</h2>
-            <p style="font-size: 1.1em; color: #e74c3c;">서비스 준비 중입니다.</p>
-            <p style="color:var(--text-color);">더 멋진 스킨을 가지고 곧 돌아오겠습니다!</p>
-            <button onclick="closeShop()" class="btn-close" style="margin-top: 20px;">닫기</button>
+            <h2>🛍️ 바둑알 상점</h2>
+            <p>나의 포인트: <span id="shop-points" style="color:red; font-weight:bold;">0</span> P</p>
+            <div id="shop-items"></div>
+            <button onclick="closeShop()" class="btn-close">닫기</button>
+        </div>
+    </div>
+
+    <div id="ai-modal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; z-index: 100;">
+        <div class="shop-card">
+            <h2>🤖 AI 대결 난이도 선택</h2>
+            <p>난이도가 높을수록 보상이 커집니다!</p>
+            <div style="display:flex; flex-direction:column; gap:10px; margin:20px 0;">
+                <button onclick="startAiGame('easy')" style="background:#2ecc71; color:white; padding:15px;">🐣 하 (보상: 50P)</button>
+                <button onclick="startAiGame('medium')" style="background:#f1c40f; color:black; padding:15px;">🐥 중 (보상: 100P)</button>
+                <button onclick="startAiGame('hard')" style="background:#e74c3c; color:white; padding:15px;">🦅 상 (보상: 300P)</button>
+            </div>
+            <button onclick="closeAiModal()" class="btn-close">취소</button>
         </div>
     </div>
 
