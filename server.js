@@ -11,11 +11,11 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static('public'));
 
 // ---------------------------------------------------------
-// 1. MongoDB 연결 및 스키마
+// 1. MongoDB 연결
 // ---------------------------------------------------------
-// ▼▼▼ 아래 "여기에비밀번호입력"을 본인의 실제 MongoDB 비밀번호로 바꾸세요! ▼▼▼
+// ▼▼▼ 비밀번호 수정 필수! ▼▼▼
 const MONGO_URI = "mongodb+srv://koojj321:abcd1234@cluster0.yh4yszy.mongodb.net/?appName=Cluster0";
-const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30분
 
 mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ DB 연결 성공!'))
@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 
 // ---------------------------------------------------------
-// 2. 서버 메모리 데이터 및 로직
+// 2. 서버 메모리 및 로직
 // ---------------------------------------------------------
 const BOARD_SIZE = 19;
 let rooms = {}; 
@@ -63,7 +63,7 @@ io.on('connection', (socket) => {
 
     socket.on('activity_ping', () => { if (socketActivity[socket.id]) socketActivity[socket.id] = Date.now(); });
 
-    // [1] 로그인
+    // [로그인]
     socket.on('login', async ({ name, password }) => {
         try {
             let user = await User.findOne({ name: name });
@@ -73,49 +73,38 @@ io.on('connection', (socket) => {
                 user = new User({ name, password });
                 await user.save();
             }
-
-            myName = name;
-            socket.myName = name;
-            connectedUsers[socket.id] = name;
-            socketActivity[socket.id] = Date.now();
-
+            myName = name; socket.myName = name; connectedUsers[socket.id] = name; socketActivity[socket.id] = Date.now();
             socket.emit('loginSuccess', { name, stats: { wins: user.wins, loses: user.loses }, points: user.points, items: user.items, equipped: user.equipped });
             socket.emit('roomListUpdate', getRoomList()); socket.emit('rankingUpdate', await getRankingDB()); io.emit('userListUpdate', Object.values(connectedUsers));
-
-        } catch (err) {
-            console.error(err);
-            socket.emit('loginFail', '로그인 오류');
-        }
+        } catch (err) { console.error(err); socket.emit('loginFail', '로그인 오류'); }
     });
 
-    // [2] 상점 및 방 로직
+    // [상점]
     socket.on('buyItem', async (itemId) => {
-        const prices = { 'gold': 500, 'diamond': 1000, 'ruby': 2000 }; 
-        const cost = prices[itemId];
+        const prices = { 'gold': 500, 'diamond': 1000, 'ruby': 2000 }; const cost = prices[itemId];
         try {
             const user = await User.findOne({ name: myName });
             if (!user || user.items.includes(itemId) || user.points < cost) {
                 return socket.emit('alert', user ? (user.items.includes(itemId) ? '이미 보유' : '포인트 부족') : '로그인 필요');
             }
-            user.points -= cost;
-            user.items.push(itemId);
-            await user.save();
+            user.points -= cost; user.items.push(itemId); await user.save();
             socket.emit('shopUpdate', { points: user.points, items: user.items, equipped: user.equipped });
         } catch (e) { console.error(e); }
     });
-
     socket.on('equipItem', async (itemId) => {
         try {
             const user = await User.findOne({ name: myName });
             if (user && user.items.includes(itemId)) {
-                user.equipped = itemId;
-                await user.save();
+                user.equipped = itemId; await user.save();
                 socket.emit('shopUpdate', { points: user.points, items: user.items, equipped: user.equipped });
             }
         } catch (e) { console.error(e); }
     });
 
+    // [채팅 및 방 로직]
     socket.on('lobbyChat', (msg) => { io.emit('lobbyChat', { sender: myName, msg }); });
+    socket.on('chat', (msg) => { if (myRoom) io.to(myRoom).emit('chat', { sender: myName, msg }); });
+
     socket.on('createRoom', ({ roomName, password }) => {
         if (rooms[roomName]) return socket.emit('error', '이미 존재하는 방입니다.');
         rooms[roomName] = { password, players: [], spectators: [], board: Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null)), turn: 'black', timerId: null, timeLeft: 30, isPlaying: false, p2Ready: false };
@@ -141,21 +130,19 @@ io.on('connection', (socket) => {
         io.to(roomName).emit('updateRoomInfo', { players: room.players, spectators: room.spectators, p2Ready: room.p2Ready });
     }
 
-    // [3] 게임 컨트롤
+    // [게임 진행]
     socket.on('toggleReady', () => {
         const room = rooms[myRoom]; if (!room) return; const me = room.players.find(p => p.id === socket.id);
         if (!me || me.isHost) return; room.p2Ready = !room.p2Ready;
         io.to(myRoom).emit('updateRoomInfo', { players: room.players, spectators: room.spectators, p2Ready: room.p2Ready });
         io.to(myRoom).emit('status', room.p2Ready ? '준비 완료! 방장님 시작하세요.' : '준비 취소.');
     });
-
     socket.on('startGame', () => {
         const room = rooms[myRoom]; if (!room) return; const me = room.players.find(p => p.id === socket.id);
         if (!me || !me.isHost || room.players.length < 2 || !room.p2Ready) return;
         room.isPlaying = true; room.board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null)); room.turn = 'black';
         io.to(myRoom).emit('gameStart', `게임 시작!`); io.emit('roomListUpdate', getRoomList()); startTimer(myRoom);
     });
-
     socket.on('placeStone', ({ x, y }) => {
         if (!myRoom || !rooms[myRoom] || !rooms[myRoom].isPlaying) return; const room = rooms[myRoom];
         const me = room.players.find(p => p.id === socket.id);
@@ -171,8 +158,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // [4] 나가기/종료
-    socket.on('chat', (msg) => { if (myRoom) io.to(myRoom).emit('chat', { sender: myName, msg }); });
+    // [연결 종료]
     socket.on('leaveRoom', () => handleDisconnect());
     socket.on('disconnect', () => handleDisconnect());
 
@@ -196,7 +182,7 @@ io.on('connection', (socket) => {
     }
 });
 
-// Helper Functions
+// [헬퍼 함수]
 function startTimer(roomName) {
     const room = rooms[roomName]; if(!room) return; room.timeLeft = 30; io.to(roomName).emit('timerUpdate', room.timeLeft);
     if(room.timerId) clearInterval(room.timerId);
@@ -221,7 +207,7 @@ async function endGame(roomName, winnerName) {
 }
 
 function getRoomList() { return Object.keys(rooms).map(key => ({ name: key, isLocked: !!rooms[key].password, count: rooms[key].players.length, isPlaying: rooms[key].isPlaying })); }
-async function getRankingDB() { try { return await User.find({ wins: -1 }).limit(5).select('name wins'); } catch { return []; } }
+async function getRankingDB() { try { return await User.find({ wins: { $gt: 0 } }).sort({ wins: -1 }).limit(5).select('name wins'); } catch { return []; } }
 function checkWin(board, x, y, stoneValue) {
     const color = stoneValue.split(':')[0]; const directions = [[1,0], [0,1], [1,1], [1,-1]];
     for (let [dx, dy] of directions) {
