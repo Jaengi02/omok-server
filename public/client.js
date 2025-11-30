@@ -70,6 +70,7 @@ function initializeTheme() {
     document.addEventListener('DOMContentLoaded', () => {
         const toggleButton = document.getElementById('btn-theme-toggle');
         if (toggleButton) {
+            // 다크 모드일 때 "☀️ Light Mode" 표시, 라이트 모드일 때 "🌙 Dark Mode" 표시
             toggleButton.innerText = savedTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
         }
     });
@@ -83,6 +84,7 @@ function toggleTheme() {
     localStorage.setItem('theme', newTheme);
     
     // 버튼 텍스트 변경
+    // 새 테마가 다크 모드면 (즉, 버튼은 라이트 모드로 전환할 것을) "☀️ Light Mode" 표시
     document.getElementById('btn-theme-toggle').innerText = newTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
 }
 
