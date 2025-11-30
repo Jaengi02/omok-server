@@ -23,21 +23,15 @@ let lastStoneElement = null;
 
 let activityTimer;
 const PING_INTERVAL_MS = 10 * 60 * 1000;
-
-// [BGM 변수]
 let bgm;
 let btnBgm;
 let soundStone;
 let soundWin;
 let soundLose;
 
-// ---------------------------------------------------------
-// [0] 초기화
-// ---------------------------------------------------------
 window.onload = () => {
-    initializeDomElements();
     initializeTheme();
-
+    initializeDomElements();
     const savedName = localStorage.getItem('omok-name');
     const savedPass = localStorage.getItem('omok-pass');
     if (savedName && savedPass) socket.emit('login', { name: savedName, password: savedPass });
@@ -46,11 +40,7 @@ window.onload = () => {
 function initializeDomElements() {
     bgm = document.getElementById('bgm');
     btnBgm = document.getElementById('btn-bgm');
-    
-    if (bgm) {
-        bgm.volume = 0.2; 
-    }
-    
+    if (bgm) bgm.volume = 0.2; 
     soundStone = new Audio('stone.mp3');
     soundWin = new Audio('win.mp3');
     soundLose = new Audio('lose.mp3');
@@ -60,23 +50,10 @@ function initializeTheme() {
     const root = document.documentElement;
     const savedTheme = localStorage.getItem('theme') || 'dark';
     root.setAttribute('data-theme', savedTheme);
-    
-    const toggleButton = document.getElementById('btn-theme-toggle');
-    if (toggleButton) {
-        toggleButton.innerText = savedTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
-    }
-}
-
-// [핵심: 글로벌 토글 함수]
-function toggleBgm() {
-    if (!bgm) return;
-    if (bgm.paused) {
-        bgm.play().catch(e => console.log("User interaction needed"));
-        btnBgm.innerText = "🎵 BGM ON";
-    } else {
-        bgm.pause();
-        btnBgm.innerText = "🔇 BGM OFF";
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+        const toggleButton = document.getElementById('btn-theme-toggle');
+        if (toggleButton) toggleButton.innerText = savedTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+    });
 }
 
 function toggleTheme() {
@@ -88,13 +65,22 @@ function toggleTheme() {
     document.getElementById('btn-theme-toggle').innerText = newTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
 }
 
+function toggleBgm() {
+    if (!bgm) return;
+    if (bgm.paused) {
+        bgm.play().catch(e => console.log("User interaction needed"));
+        btnBgm.innerText = "🎵 BGM ON";
+    } else {
+        bgm.pause();
+        btnBgm.innerText = "🔇 BGM OFF";
+    }
+}
+
 function login() {
     const name = document.getElementById('username').value;
     const pass = document.getElementById('password').value;
     if (!name || !pass) return alert('입력해주세요.');
-    
     if (bgm) bgm.play().catch(e => console.log("Interaction needed"));
-
     socket.emit('login', { name, password: pass });
 }
 
@@ -104,9 +90,14 @@ function logout() {
     location.reload();
 }
 
-// ---------------------------------------------------------
-// [1] 소켓 이벤트
-// ---------------------------------------------------------
+// [AI 관련 함수]
+function openAiModal() { document.getElementById('ai-modal').classList.remove('hidden'); }
+function closeAiModal() { document.getElementById('ai-modal').classList.add('hidden'); }
+function startAiGame(difficulty) {
+    closeAiModal();
+    socket.emit('createAiRoom', difficulty);
+}
+
 socket.on('loginSuccess', (data) => {
     myName = data.name;
     localStorage.setItem('omok-name', document.getElementById('username').value || myName);
@@ -122,7 +113,7 @@ socket.on('loginSuccess', (data) => {
 socket.on('loginFail', (msg) => {
     localStorage.clear();
     alert(msg);
-    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.add('hidden');
 });
 
@@ -132,6 +123,7 @@ function setupActivityMonitoring() {
     });
     resetActivityTimer();
 }
+
 function resetActivityTimer() {
     clearTimeout(activityTimer);
     activityTimer = setTimeout(() => {
@@ -144,24 +136,119 @@ socket.on('force_logout', (message) => { alert(message); logout(); });
 function updateUserInfo(data) {
     document.getElementById('user-hello').innerText = `안녕하세요, ${data.name}님!`;
     document.getElementById('user-points').innerText = `${data.points} P`;
+    
     const stats = data.stats || { wins: 0, loses: 0 };
     const total = stats.wins + stats.loses;
     const rate = total === 0 ? 0 : Math.round((stats.wins / total) * 100);
     document.getElementById('user-stats').innerText = `${stats.wins}승 ${stats.loses}패 (${rate}%)`;
+
+    window.myItems = data.items || [];
+    window.myEquipped = data.equipped || 'default';
 }
 socket.on('infoUpdate', updateUserInfo);
 
 function openShop() {
     document.getElementById('shop-modal').classList.remove('hidden');
     document.getElementById('shop-modal').style.display = 'flex';
-    document.getElementById('shop-points').innerText = '0 P';
-    document.getElementById('shop-items').innerHTML = '<p style="color:#555;">(준비 중)</p>';
+    document.getElementById('shop-points').innerText = document.getElementById('user-points').innerText.replace(' P','');
+    renderShopItems();
 }
 function closeShop() {
     document.getElementById('shop-modal').classList.add('hidden');
     document.getElementById('shop-modal').style.display = 'none';
 }
 
+function renderShopItems() { 
+    const items = [
+        { id: 'default', name: '기본돌', price: 0 },
+        { id: 'gold', name: '황금돌', price: 500 },
+        { id: 'diamond', name: '다이아', price: 1000 },
+        { id: 'ruby', name: '루비', price: 2000 }
+    ];
+    
+    const container = document.getElementById('shop-items');
+    container.innerHTML = '';
+
+    items.forEach(item => {
+        const div = document.createElement('div');
+        div.style.border = '1px solid #ddd';
+        div.style.padding = '10px';
+        div.style.borderRadius = '10px';
+        div.style.width = '100px';
+        div.style.display = 'flex';
+        div.style.flexDirection = 'column';
+        div.style.alignItems = 'center';
+        div.style.background = '#fff';
+
+        const previewBox = document.createElement('div');
+        previewBox.style.display = 'flex';
+        previewBox.style.gap = '5px';
+        previewBox.style.marginBottom = '8px';
+        
+        const blackStone = document.createElement('div');
+        blackStone.className = `stone black ${item.id}`; 
+        blackStone.style.width = '35px';
+        blackStone.style.height = '35px';
+        
+        const whiteStone = document.createElement('div');
+        whiteStone.className = `stone white ${item.id}`;
+        whiteStone.style.width = '35px';
+        whiteStone.style.height = '35px';
+
+        previewBox.append(blackStone, whiteStone);
+
+        const name = document.createElement('div');
+        name.innerText = item.name;
+        name.style.fontWeight = 'bold';
+        name.style.fontSize = '14px';
+        const price = document.createElement('div');
+        price.innerText = `${item.price}P`;
+        price.style.color = '#555';
+        price.style.fontSize = '12px';
+        
+        const btn = document.createElement('button');
+        btn.style.marginTop = '5px';
+        btn.style.fontSize = '12px';
+        btn.style.padding = '5px 10px';
+        btn.style.width = '100%';
+
+        if (window.myItems.includes(item.id)) {
+            if (window.myEquipped === item.id) {
+                btn.innerText = '장착중';
+                btn.disabled = true;
+                btn.style.background = '#555';
+                btn.style.color = 'white';
+                btn.style.border = '1px solid #555';
+            } else {
+                btn.innerText = '장착';
+                btn.style.background = 'white';
+                btn.style.color = '#333';
+                btn.style.border = '1px solid #ccc';
+                btn.onclick = () => socket.emit('equipItem', item.id);
+            }
+        } else {
+            btn.innerText = '구매';
+            btn.style.background = '#e3c586';
+            btn.style.color = 'black';
+            btn.onclick = () => {
+                if(confirm(`${item.name}을(를) ${item.price}포인트에 구매하시겠습니까?`)) {
+                    socket.emit('buyItem', item.id);
+                }
+            };
+        }
+
+        div.append(previewBox, name, price, btn);
+        container.appendChild(div);
+    });
+}
+socket.on('shopUpdate', (data) => {
+    document.getElementById('user-points').innerText = `${data.points} P`;
+    document.getElementById('shop-points').innerText = data.points;
+    window.myItems = data.items;
+    window.myEquipped = data.equipped;
+    renderShopItems();
+});
+socket.on('alert', (msg) => alert(msg));
 socket.on('userListUpdate', (userList) => {
     onlineCountSpan.innerText = userList.length;
     onlineListDiv.innerText = userList.join(', ');
@@ -209,43 +296,61 @@ socket.on('roomListUpdate', (rooms) => {
         roomListDiv.appendChild(div);
     });
 });
-
 socket.on('roomJoined', (data) => {
-    myColor = data.color; amIHost = data.isHost; isSpectator = data.isSpectator;
+    myColor = data.color;
+    amIHost = data.isHost;
+    isSpectator = data.isSpectator;
+
     document.getElementById('lobby-screen').classList.add('hidden');
     document.getElementById('game-screen').classList.remove('hidden');
     document.getElementById('room-title').innerText = `방: ${data.roomName}`;
     
-    btnReady.classList.add('hidden'); btnStart.classList.add('hidden'); spectatorMsg.classList.add('hidden');
+    btnReady.classList.add('hidden');
+    btnStart.classList.add('hidden');
+    spectatorMsg.classList.add('hidden');
+
     if (isSpectator) spectatorMsg.classList.remove('hidden');
     else {
         btnReady.innerText = "준비";
         if (amIHost) btnStart.classList.remove('hidden');
         else btnReady.classList.remove('hidden');
     }
-    chatMsgs.innerHTML = ''; initBoard(data.board);
-});
 
+    chatMsgs.innerHTML = '';
+    initBoard(data.board);
+});
 socket.on('updateRoomInfo', (data) => {
     const { players, spectators, p2Ready } = data;
     const p1 = players.find(p => p.color === 'black');
     const p2 = players.find(p => p.color === 'white');
-    document.getElementById('player-list').innerText = `${p1?p1.name:'?'} vs ${p2?p2.name:'?'}`;
-    spectatorListDiv.innerHTML = '';
-    spectators.forEach(s => { const d=document.createElement('div'); d.innerText=`👤 ${s.name}`; spectatorListDiv.appendChild(d); });
-    if (amIHost && !isSpectator) { btnStart.disabled = !p2Ready; btnStart.style.opacity = p2Ready?1:0.5; }
-});
+    let p1Text = p1 ? `⚫${p1.name}` : '⚫?';
+    let p2Text = p2 ? `⚪${p2.name}` : '⚪?';
+    if (p2 && p2Ready) p2Text += " [준비완료]";
+    document.getElementById('player-list').innerText = `${p1Text} vs ${p2Text}`;
 
+    spectatorListDiv.innerHTML = '';
+    spectators.forEach(s => {
+        const div = document.createElement('div');
+        div.innerText = `👤 ${s.name}`;
+        spectatorListDiv.appendChild(div);
+    });
+
+    if (amIHost && !isSpectator) {
+        btnStart.disabled = !p2Ready;
+        btnStart.style.opacity = p2Ready ? 1 : 0.5;
+    }
+});
 function toggleReady() { socket.emit('toggleReady'); }
 function startGame() { socket.emit('startGame'); }
 socket.on('gameStart', (msg) => {
     try { soundWin.play(); } catch(e){} 
     setTimeout(() => { alert(msg); statusDiv.innerText = msg; }, 100);
-    btnReady.classList.add('hidden'); btnStart.classList.add('hidden');
+    btnReady.classList.add('hidden');
+    btnStart.classList.add('hidden');
 });
-
 function initBoard(currentBoardData) {
-    board.innerHTML = ''; lastStoneElement = null;
+    board.innerHTML = '';
+    lastStoneElement = null;
     for (let y = 0; y < 19; y++) {
         for (let x = 0; x < 19; x++) {
             const cell = document.createElement('div');
@@ -261,9 +366,9 @@ function initBoard(currentBoardData) {
         }
     }
 }
-
 socket.on('updateBoard', (data) => {
-    const cell = board.children[data.y * 19 + data.x];
+    const index = data.y * 19 + data.x;
+    const cell = board.children[index];
     const stone = document.createElement('div');
     stone.className = `stone ${data.color} ${data.skin || 'default'}`;
     if (lastStoneElement) lastStoneElement.classList.remove('last-move');
@@ -272,9 +377,11 @@ socket.on('updateBoard', (data) => {
     cell.appendChild(stone);
     try { soundStone.play(); } catch(e) {}
 });
-
 socket.on('status', (msg) => statusDiv.innerText = msg);
-socket.on('timerUpdate', (time) => { timerSpan.innerText = time; timerSpan.style.color = time <= 5 ? 'red' : 'black'; });
+socket.on('timerUpdate', (time) => {
+    timerSpan.innerText = time;
+    timerSpan.style.color = time <= 5 ? 'red' : 'black';
+});
 socket.on('gameOver', (data) => {
     if (data.winner === myName) try { soundWin.play(); } catch(e){} else try { soundLose.play(); } catch(e){}
     setTimeout(() => { alert(`게임 종료! ${data.msg}`); location.reload(); }, 200);
