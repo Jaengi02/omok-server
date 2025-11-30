@@ -114,6 +114,7 @@ function resetActivityTimer() {
         resetActivityTimer(); 
     }, PING_INTERVAL_MS);
 }
+
 socket.on('force_logout', (message) => { alert(message); logout(); });
 
 function updateUserInfo(data) {
