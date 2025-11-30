@@ -1,6 +1,6 @@
 const socket = io();
 
-// UI Elements
+// UI Elements (변수는 늦게 할당되므로 let으로 선언)
 const board = document.getElementById('board');
 const statusDiv = document.getElementById('status');
 const roomListDiv = document.getElementById('room-list');
@@ -21,6 +21,7 @@ let amIHost = false;
 let isSpectator = false;
 let lastStoneElement = null;
 
+// [NEW] BGM 및 활동 감지 변수
 let activityTimer;
 const PING_INTERVAL_MS = 10 * 60 * 1000;
 let bgm;
@@ -29,40 +30,60 @@ let soundStone;
 let soundWin;
 let soundLose;
 
+// -----------------------------------------------------------
+// [0] 초기화 및 자동 로그인
+// -----------------------------------------------------------
 
 window.onload = () => {
-    initializeDomElements();
+    initializeTheme(); // 테마 초기화
+    initializeDomElements(); // DOM 요소 초기화 (BGM 포함)
 
     const savedName = localStorage.getItem('omok-name');
     const savedPass = localStorage.getItem('omok-pass');
     if (savedName && savedPass) socket.emit('login', { name: savedName, password: savedPass });
 };
 
+// [NEW] 돔 요소 초기화 (BGM/사운드)
 function initializeDomElements() {
+    // 요소 할당
     bgm = document.getElementById('bgm');
     btnBgm = document.getElementById('btn-bgm');
     
+    // BGM 설정
     if (bgm) {
         bgm.volume = 0.2; 
     }
     
+    // 사운드 파일 할당
     soundStone = new Audio('stone.mp3');
     soundWin = new Audio('win.mp3');
     soundLose = new Audio('lose.mp3');
 }
 
-function toggleBgm() {
-    if (!bgm) return;
+// [NEW] 테마 초기화 및 토글
+function initializeTheme() {
+    const root = document.documentElement;
+    const savedTheme = localStorage.getItem('theme') || 'dark'; // 기본 테마는 다크 모드
+    root.setAttribute('data-theme', savedTheme);
     
-    if (bgm.paused) {
-        bgm.play().catch(e => console.log("BGM requires user interaction to play."));
-        btnBgm.innerText = "🎵 BGM ON";
-        btnBgm.classList.remove('bgm-off');
-    } else {
-        bgm.pause();
-        btnBgm.innerText = "🔇 BGM OFF";
-        btnBgm.classList.add('bgm-off');
-    }
+    // 버튼 텍스트 초기화 (버튼이 HTML에 로드된 후 실행되도록 돔 로드 완료 시점에 설정)
+    document.addEventListener('DOMContentLoaded', () => {
+        const toggleButton = document.getElementById('btn-theme-toggle');
+        if (toggleButton) {
+            toggleButton.innerText = savedTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+        }
+    });
+}
+
+function toggleTheme() {
+    const root = document.documentElement;
+    const currentTheme = root.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    // 버튼 텍스트 변경
+    document.getElementById('btn-theme-toggle').innerText = newTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
 }
 
 function login() {
@@ -80,6 +101,10 @@ function logout() {
     localStorage.clear();
     location.reload();
 }
+
+// -----------------------------------------------------------
+// [1] 이벤트 핸들러 및 기능
+// -----------------------------------------------------------
 
 socket.on('loginSuccess', (data) => {
     myName = data.name;
@@ -100,6 +125,7 @@ socket.on('loginFail', (msg) => {
     document.getElementById('lobby-screen').classList.add('hidden');
 });
 
+// [활동 감지 로직]
 function setupActivityMonitoring() {
     ['mousemove', 'keydown', 'scroll', 'click'].forEach(eventType => {
         document.addEventListener(eventType, resetActivityTimer);
@@ -114,7 +140,6 @@ function resetActivityTimer() {
         resetActivityTimer(); 
     }, PING_INTERVAL_MS);
 }
-
 socket.on('force_logout', (message) => { alert(message); logout(); });
 
 function updateUserInfo(data) {
@@ -134,111 +159,18 @@ socket.on('infoUpdate', updateUserInfo);
 function openShop() {
     document.getElementById('shop-modal').classList.remove('hidden');
     document.getElementById('shop-modal').style.display = 'flex';
-    document.getElementById('shop-points').innerText = document.getElementById('user-points').innerText.replace(' P','');
-    renderShopItems();
+    document.getElementById('shop-points').innerText = '0 P';
+    
+    // [FIX] 상점 비활성화 로직: renderShopItems 대신 준비 중 메시지 표시
+    document.getElementById('shop-items').innerHTML = 
+        '<p style="color:#555;">(상점 기능은 잠시 준비 중입니다.)</p>';
 }
 function closeShop() {
     document.getElementById('shop-modal').classList.add('hidden');
     document.getElementById('shop-modal').style.display = 'none';
 }
 
-function renderShopItems() { 
-    const items = [
-        { id: 'default', name: '기본돌', price: 0 },
-        { id: 'gold', name: '황금돌', price: 500 },
-        { id: 'diamond', name: '다이아', price: 1000 },
-        { id: 'ruby', name: '루비', price: 2000 }
-    ];
-    
-    const container = document.getElementById('shop-items');
-    container.innerHTML = '';
-
-    items.forEach(item => {
-        const div = document.createElement('div');
-        div.style.border = '1px solid #ddd';
-        div.style.padding = '10px';
-        div.style.borderRadius = '10px';
-        div.style.width = '100px';
-        div.style.display = 'flex';
-        div.style.flexDirection = 'column';
-        div.style.alignItems = 'center';
-        div.style.background = '#fff';
-
-        const previewBox = document.createElement('div');
-        previewBox.style.display = 'flex';
-        previewBox.style.gap = '5px';
-        previewBox.style.marginBottom = '8px';
-        
-        const blackStone = document.createElement('div');
-        blackStone.className = `stone black ${item.id}`; 
-        blackStone.style.width = '35px';
-        blackStone.style.height = '35px';
-        blackStone.style.boxShadow = '1px 1px 3px rgba(0,0,0,0.3)';
-
-        const whiteStone = document.createElement('div');
-        whiteStone.className = `stone white ${item.id}`;
-        whiteStone.style.width = '35px';
-        whiteStone.style.height = '35px';
-        whiteStone.style.boxShadow = '1px 1px 3px rgba(0,0,0,0.3)';
-
-        previewBox.append(blackStone, whiteStone);
-
-        const name = document.createElement('div');
-        name.innerText = item.name;
-        name.style.fontWeight = 'bold';
-        name.style.fontSize = '14px';
-        
-        const price = document.createElement('div');
-        price.innerText = `${item.price}P`;
-        price.style.color = '#555';
-        price.style.fontSize = '12px';
-        
-        const btn = document.createElement('button');
-        btn.style.marginTop = '5px';
-        btn.style.fontSize = '12px';
-        btn.style.padding = '5px 10px';
-        btn.style.width = '100%';
-
-        if (window.myItems.includes(item.id)) {
-            if (window.myEquipped === item.id) {
-                btn.innerText = '장착중';
-                btn.disabled = true;
-                btn.style.background = '#555';
-                btn.style.color = 'white';
-                btn.style.border = '1px solid #555';
-            } else {
-                btn.innerText = '장착';
-                btn.style.background = 'white';
-                btn.style.color = '#333';
-                btn.style.border = '1px solid #ccc';
-                btn.onclick = () => socket.emit('equipItem', item.id);
-            }
-        } else {
-            btn.innerText = '구매';
-            btn.style.background = '#e3c586';
-            btn.style.color = 'black';
-            btn.onclick = () => {
-                if(confirm(`${item.name}을(를) ${item.price}포인트에 구매하시겠습니까?`)) {
-                    socket.emit('buyItem', item.id);
-                }
-            };
-        }
-
-        div.append(previewBox, name, price, btn);
-        container.appendChild(div);
-    });
-}
-
-socket.on('shopUpdate', (data) => {
-    document.getElementById('user-points').innerText = `${data.points} P`;
-    document.getElementById('shop-points').innerText = data.points;
-    window.myItems = data.items;
-    window.myEquipped = data.equipped;
-    renderShopItems();
-});
-socket.on('alert', (msg) => alert(msg));
-
-
+// [나머지 게임 로직은 유지]
 socket.on('userListUpdate', (userList) => {
     onlineCountSpan.innerText = userList.length;
     onlineListDiv.innerText = userList.join(', ');
