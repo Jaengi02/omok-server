@@ -9,7 +9,15 @@ body { text-align: center; background-color: var(--bg-color); color: var(--text-
 button { padding: 8px 15px; border: none; border-radius: 5px; font-weight: bold; transition: all 0.2s; cursor: pointer; }
 input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid var(--box-border); background: var(--input-bg); color: var(--input-color); }
 
-.bgm-toggle { position: fixed; top: 10px; right: 10px; z-index: 1000; background: #333; color: white; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+.bgm-toggle { 
+    position: fixed; 
+    top: 20px;  /* [수정] 10px -> 20px 로 내려서 여유 공간 확보 */
+    right: 20px; /* [수정] 오른쪽 여백도 조금 더 줌 */
+    z-index: 1000; 
+    background: #333; 
+    color: white; 
+    box-shadow: 0 0 10px rgba(0,0,0,0.5); 
+}
 .theme-btn { right: 130px !important; }
 
 .login-bg { background-image: url('/images/bg_pc.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; position: relative; }
@@ -28,7 +36,21 @@ input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid var(--
 .room-item { border-bottom: 1px solid var(--box-border); padding: 12px; cursor: pointer; display: flex; justify-content: space-between; }
 .room-item:hover { background-color: var(--chat-bg); }
 
-.game-header-bar { background: var(--box-bg); color: var(--text-color); padding: 10px 20px; padding-right: 240px; border-radius: 5px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+.game-header-bar { 
+    /* ... 기존 배경색, 글자색 등 유지 ... */
+    
+    /* [수정] 오른쪽 여백을 350px로 늘려서 겹침 방지 */
+    padding: 10px 20px; 
+    padding-right: 350px; 
+    
+    /* ... 나머지 테두리, 정렬 속성 유지 ... */
+    border-radius: 5px; 
+    margin-bottom: 20px; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
 .game-controls { display: flex; gap: 10px; align-items: center; }
 #game-layout { display: flex; justify-content: center; gap: 20px; align-items: flex-start; max-width: 100%; }
 .board-area { display: flex; flex-direction: column; align-items: center; }
@@ -68,4 +90,8 @@ input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid var(--
     #game-layout { flex-direction: column; align-items: center; }
     #board { width: 95vw; height: 95vw; padding: 5px; }
     .game-sidebar { width: 95vw; }
+}
+/* [추가] 다크모드 버튼 위치 강제 지정 (BGM 버튼 왼쪽) */
+#btn-theme-toggle {
+    right: 150px !important; /* BGM 버튼(20px) + 버튼크기 + 간격 */
 }
