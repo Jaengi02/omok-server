@@ -7,7 +7,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <button id="btn-bgm" onclick="toggleBgm()" class="bgm-toggle">🎵 BGM ON</button>
+    <button id="btn-theme-toggle" onclick="toggleTheme()" class="bgm-toggle" style="right: 80px;">
+    🌙 Dark Mode
+</button>
 </head>
 <body>
     <audio id="bgm" src="bgm.mp3" loop></audio>
@@ -119,15 +121,16 @@
     </div>
 
     <div id="shop-modal" class="hidden">
-        <div class="shop-card">
-            <h2>🛍️ 바둑알 상점</h2>
-            <p>나의 포인트: <span id="shop-points" style="color:red; font-weight:bold;">0</span> P</p>
-            <div id="shop-items"></div>
-            <button onclick="closeShop()" class="btn-close">닫기</button>
-        </div>
+        <div class="shop-card" style="max-width: 400px; padding: 40px;">
+    <h2 style="margin-top:0; color:#e74c3c;">🛠️ 서비스 준비 중</h2>
+    <p style="font-size: 1.1em;">더 나은 경험을 위해 새로운 기능과 스킨을 준비하고 있습니다.</p>
+    <p style="color:var(--text-color);">곧 돌아오겠습니다!</p>
+    <button onclick="closeShop()" class="btn-close" style="margin-top: 20px;">닫기</button>
+</div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="client.js"></script>
 </body>
 </html>
+
