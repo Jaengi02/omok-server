@@ -23,16 +23,20 @@ let lastStoneElement = null;
 
 let activityTimer;
 const PING_INTERVAL_MS = 10 * 60 * 1000;
+
+// [BGM 변수]
 let bgm;
 let btnBgm;
 let soundStone;
 let soundWin;
 let soundLose;
 
-
+// ---------------------------------------------------------
+// [0] 초기화
+// ---------------------------------------------------------
 window.onload = () => {
-    initializeTheme(); // [FIX: 테마 초기화 함수 확인]
     initializeDomElements();
+    initializeTheme();
 
     const savedName = localStorage.getItem('omok-name');
     const savedPass = localStorage.getItem('omok-pass');
@@ -52,28 +56,35 @@ function initializeDomElements() {
     soundLose = new Audio('lose.mp3');
 }
 
-// [FIX: 테마 초기화 함수]
 function initializeTheme() {
     const root = document.documentElement;
-    const savedTheme = localStorage.getItem('theme') || 'dark'; // 기본 테마는 다크 모드
+    const savedTheme = localStorage.getItem('theme') || 'dark';
     root.setAttribute('data-theme', savedTheme);
     
-    document.addEventListener('DOMContentLoaded', () => {
-        const toggleButton = document.getElementById('btn-theme-toggle');
-        if (toggleButton) {
-            toggleButton.innerText = savedTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
-        }
-    });
+    const toggleButton = document.getElementById('btn-theme-toggle');
+    if (toggleButton) {
+        toggleButton.innerText = savedTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+    }
 }
 
-// [FIX: 테마 토글 함수]
+// [핵심: 글로벌 토글 함수]
+function toggleBgm() {
+    if (!bgm) return;
+    if (bgm.paused) {
+        bgm.play().catch(e => console.log("User interaction needed"));
+        btnBgm.innerText = "🎵 BGM ON";
+    } else {
+        bgm.pause();
+        btnBgm.innerText = "🔇 BGM OFF";
+    }
+}
+
 function toggleTheme() {
     const root = document.documentElement;
     const currentTheme = root.getAttribute('data-theme');
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
     root.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
-    
     document.getElementById('btn-theme-toggle').innerText = newTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
 }
 
@@ -82,7 +93,7 @@ function login() {
     const pass = document.getElementById('password').value;
     if (!name || !pass) return alert('입력해주세요.');
     
-    if (bgm) bgm.play().catch(e => console.log("BGM requires user interaction to play."));
+    if (bgm) bgm.play().catch(e => console.log("Interaction needed"));
 
     socket.emit('login', { name, password: pass });
 }
@@ -93,6 +104,9 @@ function logout() {
     location.reload();
 }
 
+// ---------------------------------------------------------
+// [1] 소켓 이벤트
+// ---------------------------------------------------------
 socket.on('loginSuccess', (data) => {
     myName = data.name;
     localStorage.setItem('omok-name', document.getElementById('username').value || myName);
@@ -108,7 +122,7 @@ socket.on('loginSuccess', (data) => {
 socket.on('loginFail', (msg) => {
     localStorage.clear();
     alert(msg);
-    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('lobby-screen').classList.add('hidden');
 });
 
@@ -118,7 +132,6 @@ function setupActivityMonitoring() {
     });
     resetActivityTimer();
 }
-
 function resetActivityTimer() {
     clearTimeout(activityTimer);
     activityTimer = setTimeout(() => {
@@ -126,20 +139,15 @@ function resetActivityTimer() {
         resetActivityTimer(); 
     }, PING_INTERVAL_MS);
 }
-
 socket.on('force_logout', (message) => { alert(message); logout(); });
 
 function updateUserInfo(data) {
     document.getElementById('user-hello').innerText = `안녕하세요, ${data.name}님!`;
     document.getElementById('user-points').innerText = `${data.points} P`;
-    
     const stats = data.stats || { wins: 0, loses: 0 };
     const total = stats.wins + stats.loses;
     const rate = total === 0 ? 0 : Math.round((stats.wins / total) * 100);
     document.getElementById('user-stats').innerText = `${stats.wins}승 ${stats.loses}패 (${rate}%)`;
-
-    window.myItems = data.items || [];
-    window.myEquipped = data.equipped || 'default';
 }
 socket.on('infoUpdate', updateUserInfo);
 
@@ -147,33 +155,12 @@ function openShop() {
     document.getElementById('shop-modal').classList.remove('hidden');
     document.getElementById('shop-modal').style.display = 'flex';
     document.getElementById('shop-points').innerText = '0 P';
-    
-    // 상점 비활성화 로직
-    document.getElementById('shop-items').innerHTML = 
-        '<p style="color:#555;">(상점 기능은 잠시 준비 중입니다.)</p>';
+    document.getElementById('shop-items').innerHTML = '<p style="color:#555;">(준비 중)</p>';
 }
 function closeShop() {
     document.getElementById('shop-modal').classList.add('hidden');
     document.getElementById('shop-modal').style.display = 'none';
 }
-
-function renderShopItems() { 
-    const items = [
-        { id: 'default', name: '기본돌', price: 0 },
-        { id: 'gold', name: '황금돌', price: 500 },
-        { id: 'diamond', name: '다이아', price: 1000 },
-        { id: 'ruby', name: '루비', price: 2000 }
-    ];
-}
-
-socket.on('shopUpdate', (data) => {
-    document.getElementById('user-points').innerText = `${data.points} P`;
-    document.getElementById('shop-points').innerText = data.points;
-    window.myItems = data.items;
-    window.myEquipped = data.equipped;
-});
-socket.on('alert', (msg) => alert(msg));
-
 
 socket.on('userListUpdate', (userList) => {
     onlineCountSpan.innerText = userList.length;
@@ -212,9 +199,8 @@ socket.on('roomListUpdate', (rooms) => {
         const div = document.createElement('div');
         div.className = 'room-item';
         const lock = room.isLocked ? '🔒' : '';
-        const statusClass = room.isPlaying ? 'room-status-playing' : 'room-status-waiting';
         const statusText = room.isPlaying ? '게임중' : `대기중 (${room.count}/2)`;
-        div.innerHTML = `<span>${room.name} ${lock}</span> <span class="${statusClass}">${statusText}</span>`;
+        div.innerHTML = `<span>${room.name} ${lock}</span> <span>${statusText}</span>`;
         div.onclick = () => {
             let pass = room.isLocked ? prompt('비밀번호:') : '';
             if (room.isLocked && pass === null) return;
@@ -225,78 +211,51 @@ socket.on('roomListUpdate', (rooms) => {
 });
 
 socket.on('roomJoined', (data) => {
-    myColor = data.color;
-    amIHost = data.isHost;
-    isSpectator = data.isSpectator;
-
+    myColor = data.color; amIHost = data.isHost; isSpectator = data.isSpectator;
     document.getElementById('lobby-screen').classList.add('hidden');
     document.getElementById('game-screen').classList.remove('hidden');
     document.getElementById('room-title').innerText = `방: ${data.roomName}`;
     
-    btnReady.classList.add('hidden');
-    btnStart.classList.add('hidden');
-    spectatorMsg.classList.add('hidden');
-
+    btnReady.classList.add('hidden'); btnStart.classList.add('hidden'); spectatorMsg.classList.add('hidden');
     if (isSpectator) spectatorMsg.classList.remove('hidden');
     else {
         btnReady.innerText = "준비";
         if (amIHost) btnStart.classList.remove('hidden');
         else btnReady.classList.remove('hidden');
     }
-
-    chatMsgs.innerHTML = '';
-    initBoard(data.board);
+    chatMsgs.innerHTML = ''; initBoard(data.board);
 });
 
 socket.on('updateRoomInfo', (data) => {
     const { players, spectators, p2Ready } = data;
     const p1 = players.find(p => p.color === 'black');
     const p2 = players.find(p => p.color === 'white');
-    let p1Text = p1 ? `⚫${p1.name}` : '⚫?';
-    let p2Text = p2 ? `⚪${p2.name}` : '⚪?';
-    if (p2 && p2Ready) p2Text += " [준비완료]";
-    document.getElementById('player-list').innerText = `${p1Text} vs ${p2Text}`;
-
+    document.getElementById('player-list').innerText = `${p1?p1.name:'?'} vs ${p2?p2.name:'?'}`;
     spectatorListDiv.innerHTML = '';
-    spectators.forEach(s => {
-        const div = document.createElement('div');
-        div.innerText = `👤 ${s.name}`;
-        spectatorListDiv.appendChild(div);
-    });
-
-    if (amIHost && !isSpectator) {
-        btnStart.disabled = !p2Ready;
-        btnStart.style.opacity = p2Ready ? 1 : 0.5;
-    }
+    spectators.forEach(s => { const d=document.createElement('div'); d.innerText=`👤 ${s.name}`; spectatorListDiv.appendChild(d); });
+    if (amIHost && !isSpectator) { btnStart.disabled = !p2Ready; btnStart.style.opacity = p2Ready?1:0.5; }
 });
 
 function toggleReady() { socket.emit('toggleReady'); }
 function startGame() { socket.emit('startGame'); }
-
 socket.on('gameStart', (msg) => {
     try { soundWin.play(); } catch(e){} 
     setTimeout(() => { alert(msg); statusDiv.innerText = msg; }, 100);
-    btnReady.classList.add('hidden');
-    btnStart.classList.add('hidden');
+    btnReady.classList.add('hidden'); btnStart.classList.add('hidden');
 });
 
 function initBoard(currentBoardData) {
-    board.innerHTML = '';
-    lastStoneElement = null;
+    board.innerHTML = ''; lastStoneElement = null;
     for (let y = 0; y < 19; y++) {
         for (let x = 0; x < 19; x++) {
             const cell = document.createElement('div');
             cell.className = 'cell';
             cell.onclick = () => { if(!isSpectator && myColor) socket.emit('placeStone', { x, y }); };
             board.appendChild(cell);
-
             if (currentBoardData && currentBoardData[y][x]) {
                 const parts = currentBoardData[y][x].split(':');
-                const color = parts[0];
-                const skin = parts[1] || 'default';
-                
                 const stone = document.createElement('div');
-                stone.className = `stone ${color} ${skin}`;
+                stone.className = `stone ${parts[0]} ${parts[1]||'default'}`;
                 cell.appendChild(stone);
             }
         }
@@ -304,44 +263,28 @@ function initBoard(currentBoardData) {
 }
 
 socket.on('updateBoard', (data) => {
-    const index = data.y * 19 + data.x;
-    const cell = board.children[index];
+    const cell = board.children[data.y * 19 + data.x];
     const stone = document.createElement('div');
     stone.className = `stone ${data.color} ${data.skin || 'default'}`;
-    
     if (lastStoneElement) lastStoneElement.classList.remove('last-move');
     stone.classList.add('last-move');
     lastStoneElement = stone;
-
     cell.appendChild(stone);
     try { soundStone.play(); } catch(e) {}
 });
 
 socket.on('status', (msg) => statusDiv.innerText = msg);
-socket.on('timerUpdate', (time) => {
-    timerSpan.innerText = time;
-    timerSpan.style.color = time <= 5 ? 'red' : 'black';
-});
-
+socket.on('timerUpdate', (time) => { timerSpan.innerText = time; timerSpan.style.color = time <= 5 ? 'red' : 'black'; });
 socket.on('gameOver', (data) => {
-    if (data.winner === myName) try { soundWin.play(); } catch(e){}
-    else try { soundLose.play(); } catch(e){}
-    
+    if (data.winner === myName) try { soundWin.play(); } catch(e){} else try { soundLose.play(); } catch(e){}
     setTimeout(() => { alert(`게임 종료! ${data.msg}`); location.reload(); }, 200);
 });
-
 socket.on('forceLeave', () => { alert("방 사라짐"); location.reload(); });
 socket.on('error', (msg) => alert(msg));
 function leaveRoom() { socket.emit('leaveRoom'); location.reload(); }
-
-function sendChat() {
-    const input = document.getElementById('chat-input');
-    if (input.value.trim()) { socket.emit('chat', input.value); input.value = ''; }
-}
+function sendChat() { const input = document.getElementById('chat-input'); if (input.value.trim()) { socket.emit('chat', input.value); input.value = ''; } }
 socket.on('chat', (data) => {
-    const div = document.createElement('div');
-    div.className = 'chat-msg';
+    const div = document.createElement('div'); div.className = 'chat-msg';
     div.innerHTML = `<b>${data.sender}:</b> ${data.msg}`;
-    chatMsgs.appendChild(div);
-    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    chatMsgs.appendChild(div); chatMsgs.scrollTop = chatMsgs.scrollHeight;
 });
