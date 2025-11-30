@@ -13,7 +13,7 @@ input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; 
 .bgm-toggle { position: fixed; top: 10px; right: 10px; z-index: 100; background: #333; color: white; }
 
 /* ----------------------------------------------------------------------- */
-/* [1] 로그인 화면 (요청대로 애니메이션 및 디자인 유지) */
+/* [1] 로그인 화면 (애니메이션 및 디자인 유지) */
 /* ----------------------------------------------------------------------- */
 .login-bg {
     background-image: url('/images/bg_pc.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat;
@@ -41,12 +41,16 @@ input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; 
 .lobby-main { flex: 2; display: flex; flex-direction: column; gap: 15px; }
 .lobby-side { flex: 1; display: flex; flex-direction: column; gap: 15px; min-width: 300px; }
 .box-style { 
+    /* 단순 흰색 박스로 복구 */
     background: white; border: 1px solid #ddd; padding: 15px; border-radius: 10px; 
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); 
     text-align: left; 
+    color: #333 !important; /* 글자색 검은색으로 고정 */
 }
 .room-item { border-bottom: 1px solid #eee; padding: 12px; cursor: pointer; display: flex; justify-content: space-between; }
 .room-item:hover { background-color: #f9f9f9; }
+.btn-close { background:#333; color:white; padding:10px 20px; border-radius:5px; } /* 상점 닫기 버튼 복구 */
+
 
 /* 게임방 UI */
 .game-header-bar { background: #fff; color: #333; padding: 10px 20px; border-radius: 5px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
@@ -54,7 +58,7 @@ input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; 
 
 /* 게임 레이아웃 (배치 깨짐 방지) */
 #game-layout { 
-    display: flex; /* Flexbox 유지 */
+    display: flex; 
     justify-content: center; 
     gap: 20px; 
     align-items: flex-start; 
@@ -64,7 +68,7 @@ input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; 
 
 /* 오목판 (19x19) - 기본 디자인으로 복구 */
 #board {
-    background-color: #c07d3c; 
+    background-color: #c07d3c; /* 단순 나무색 */
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); 
     width: 650px; height: 650px;
     border: 3px solid #663300;
@@ -80,20 +84,24 @@ input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; 
 .stone { width: 90%; height: 90%; border-radius: 50%; position: relative; z-index: 10; }
 .stone.black { background: #000; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
 .stone.white { background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.3); }
+/* (나머지 스킨들은 기본 돌 위에 얹혀져 작동) */
 
 /* 오른쪽 사이드바 */
 .game-sidebar { width: 300px; display: flex; flex-direction: column; gap: 10px; }
-#chat-container { 
-    height: 400px; background: white; border: 1px solid #ddd; 
-    display: flex; flex-direction: column; border-radius: 5px; 
-}
+#chat-container { height: 400px; background: white; border: 1px solid #ddd; display: flex; flex-direction: column; border-radius: 5px; }
 #chat-messages { flex: 1; padding: 10px; overflow-y: auto; text-align: left; background: #f9f9f9; color: #333; }
 .chat-input-box { display: flex; border-top: 1px solid #eee; padding: 5px; } 
 #chat-input { flex: 1; border: none; margin: 0; padding: 10px; background: transparent; color: black; outline: none; }
 #spectator-box { height: 150px; background: white; color: #333; border: 1px solid #ddd; overflow-y: auto; padding: 10px; border-radius: 5px; }
 
+/* 상점 모달 */
+#shop-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; justify-content:center; align-items:center; z-index: 100; }
+.shop-card { background:white; padding:20px; border-radius:10px; width:450px; text-align:center; box-shadow: 0 5px 15px rgba(0,0,0,0.5); color: #333; }
+#shop-items { display:flex; flex-wrap: wrap; gap:15px; justify-content:center; margin:20px 0; }
+
 /* 모바일 반응형 */
 @media (max-width: 900px) {
+    .login-bg { background-image: url('/images/bg_mobile.jpg'); }
     .lobby-container { flex-direction: column-reverse; }
     .lobby-main, .lobby-side { width: 100%; }
     #game-layout { flex-direction: column; align-items: center; }
