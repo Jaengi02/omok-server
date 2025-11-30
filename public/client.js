@@ -1,6 +1,6 @@
 const socket = io();
 
-// UI Elements (변수는 늦게 할당되므로 let으로 선언)
+// UI Elements
 const board = document.getElementById('board');
 const statusDiv = document.getElementById('status');
 const roomListDiv = document.getElementById('room-list');
@@ -21,7 +21,6 @@ let amIHost = false;
 let isSpectator = false;
 let lastStoneElement = null;
 
-// [NEW] BGM 및 활동 감지 변수
 let activityTimer;
 const PING_INTERVAL_MS = 10 * 60 * 1000;
 let bgm;
@@ -30,31 +29,24 @@ let soundStone;
 let soundWin;
 let soundLose;
 
-// -----------------------------------------------------------
-// [0] 초기화 및 자동 로그인
-// -----------------------------------------------------------
 
 window.onload = () => {
-    initializeTheme(); // 테마 초기화
-    initializeDomElements(); // DOM 요소 초기화 (BGM 포함)
+    initializeTheme(); // [NEW] 테마 초기화
+    initializeDomElements();
 
     const savedName = localStorage.getItem('omok-name');
     const savedPass = localStorage.getItem('omok-pass');
     if (savedName && savedPass) socket.emit('login', { name: savedName, password: savedPass });
 };
 
-// [NEW] 돔 요소 초기화 (BGM/사운드)
 function initializeDomElements() {
-    // 요소 할당
     bgm = document.getElementById('bgm');
     btnBgm = document.getElementById('btn-bgm');
     
-    // BGM 설정
     if (bgm) {
         bgm.volume = 0.2; 
     }
     
-    // 사운드 파일 할당
     soundStone = new Audio('stone.mp3');
     soundWin = new Audio('win.mp3');
     soundLose = new Audio('lose.mp3');
@@ -66,11 +58,9 @@ function initializeTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark'; // 기본 테마는 다크 모드
     root.setAttribute('data-theme', savedTheme);
     
-    // 버튼 텍스트 초기화 (버튼이 HTML에 로드된 후 실행되도록 돔 로드 완료 시점에 설정)
     document.addEventListener('DOMContentLoaded', () => {
         const toggleButton = document.getElementById('btn-theme-toggle');
         if (toggleButton) {
-            // 다크 모드일 때 "☀️ Light Mode" 표시, 라이트 모드일 때 "🌙 Dark Mode" 표시
             toggleButton.innerText = savedTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
         }
     });
@@ -83,8 +73,6 @@ function toggleTheme() {
     root.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
     
-    // 버튼 텍스트 변경
-    // 새 테마가 다크 모드면 (즉, 버튼은 라이트 모드로 전환할 것을) "☀️ Light Mode" 표시
     document.getElementById('btn-theme-toggle').innerText = newTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
 }
 
@@ -103,10 +91,6 @@ function logout() {
     localStorage.clear();
     location.reload();
 }
-
-// -----------------------------------------------------------
-// [1] 이벤트 핸들러 및 기능
-// -----------------------------------------------------------
 
 socket.on('loginSuccess', (data) => {
     myName = data.name;
@@ -127,7 +111,6 @@ socket.on('loginFail', (msg) => {
     document.getElementById('lobby-screen').classList.add('hidden');
 });
 
-// [활동 감지 로직]
 function setupActivityMonitoring() {
     ['mousemove', 'keydown', 'scroll', 'click'].forEach(eventType => {
         document.addEventListener(eventType, resetActivityTimer);
@@ -142,6 +125,7 @@ function resetActivityTimer() {
         resetActivityTimer(); 
     }, PING_INTERVAL_MS);
 }
+
 socket.on('force_logout', (message) => { alert(message); logout(); });
 
 function updateUserInfo(data) {
@@ -163,7 +147,7 @@ function openShop() {
     document.getElementById('shop-modal').style.display = 'flex';
     document.getElementById('shop-points').innerText = '0 P';
     
-    // [FIX] 상점 비활성화 로직: renderShopItems 대신 준비 중 메시지 표시
+    // 상점 비활성화 로직
     document.getElementById('shop-items').innerHTML = 
         '<p style="color:#555;">(상점 기능은 잠시 준비 중입니다.)</p>';
 }
@@ -172,7 +156,27 @@ function closeShop() {
     document.getElementById('shop-modal').style.display = 'none';
 }
 
-// [나머지 게임 로직은 유지]
+function renderShopItems() { 
+    // 이 함수는 현재 상점 비활성화로 인해 사용되지 않지만, 구조 유지를 위해 남겨둡니다.
+    const items = [
+        { id: 'default', name: '기본돌', price: 0 },
+        { id: 'gold', name: '황금돌', price: 500 },
+        { id: 'diamond', name: '다이아', price: 1000 },
+        { id: 'ruby', name: '루비', price: 2000 }
+    ];
+    // ... (이하 생략) ...
+}
+
+socket.on('shopUpdate', (data) => {
+    document.getElementById('user-points').innerText = `${data.points} P`;
+    document.getElementById('shop-points').innerText = data.points;
+    window.myItems = data.items;
+    window.myEquipped = data.equipped;
+    // renderShopItems(); // 비활성화 상태이므로 호출하지 않음
+});
+socket.on('alert', (msg) => alert(msg));
+
+
 socket.on('userListUpdate', (userList) => {
     onlineCountSpan.innerText = userList.length;
     onlineListDiv.innerText = userList.join(', ');
