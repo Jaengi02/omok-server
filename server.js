@@ -62,17 +62,32 @@ io.on('connection', (socket) => {
 
     socket.on('activity_ping', () => { if (socketActivity[socket.id]) socketActivity[socket.id] = Date.now(); });
 
+    // [1] 로그인
     socket.on('login', async ({ name, password }) => {
         try {
             let user = await User.findOne({ name: name });
-            if (user && user.password !== password) return socket.emit('loginFail', '비밀번호 불일치');
-            if (!user) { user = new User({ name, password }); await user.save(); }
-            myName = name; socket.myName = name; connectedUsers[socket.id] = name; socketActivity[socket.id] = Date.now();
+            if (user) {
+                if (user.password !== password) return socket.emit('loginFail', '비밀번호 불일치');
+            } else {
+                user = new User({ name, password });
+                await user.save();
+            }
+
+            myName = name;
+            socket.myName = name;
+            connectedUsers[socket.id] = name;
+            socketActivity[socket.id] = Date.now();
+
             socket.emit('loginSuccess', { name, stats: { wins: user.wins, loses: user.loses }, points: user.points, items: user.items, equipped: user.equipped });
             socket.emit('roomListUpdate', getRoomList()); socket.emit('rankingUpdate', await getRankingDB()); io.emit('userListUpdate', Object.values(connectedUsers));
-        } catch (err) { console.error(err); socket.emit('loginFail', '로그인 오류'); }
+
+        } catch (err) {
+            console.error(err);
+            socket.emit('loginFail', '로그인 오류');
+        }
     });
 
+    // [2] 상점 및 방 로직
     socket.on('buyItem', async (itemId) => {
         const prices = { 'gold': 500, 'diamond': 1000, 'ruby': 2000 }; const cost = prices[itemId];
         try {
@@ -84,7 +99,6 @@ io.on('connection', (socket) => {
             socket.emit('shopUpdate', { points: user.points, items: user.items, equipped: user.equipped });
         } catch (e) { console.error(e); }
     });
-
     socket.on('equipItem', async (itemId) => {
         try {
             const user = await User.findOne({ name: myName });
@@ -147,13 +161,13 @@ io.on('connection', (socket) => {
         }
     });
 
+    // [3] 나가기/종료
     socket.on('chat', (msg) => { if (myRoom) io.to(myRoom).emit('chat', { sender: myName, msg }); });
     socket.on('leaveRoom', () => handleDisconnect());
     socket.on('disconnect', () => handleDisconnect());
 
     function handleDisconnect() {
-        if (socketActivity[socket.id]) delete socketActivity[socket.id];
-        if (connectedUsers[socket.id]) delete connectedUsers[socket.id];
+        if (socketActivity[socket.id]) delete socketActivity[socket.id]; if (connectedUsers[socket.id]) delete connectedUsers[socket.id];
 
         for (const roomName in rooms) {
             const room = rooms[roomName];
