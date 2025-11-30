@@ -176,12 +176,11 @@ io.on('connection', (socket) => {
         io.to(myRoom).emit('gameStart', `게임 시작!`); io.emit('roomListUpdate', getRoomList()); startTimer(myRoom);
     });
 
-    // [돌 두기 & AI 로직]
+// [돌 두기 & AI 로직]
     socket.on('placeStone', ({ x, y }) => {
         const room = rooms[myRoom];
         if (!room || !room.isPlaying) return;
         const me = room.players.find(p => p.id === socket.id);
-        // 내 턴이 아니거나(AI턴 포함), 이미 돌이 있으면 무시
         if (me.color !== room.turn || room.board[y][x] !== null) return;
 
         const stoneValue = `${me.color}:${me.skin}`; 
@@ -189,35 +188,44 @@ io.on('connection', (socket) => {
         
         io.to(myRoom).emit('updateBoard', { x, y, color: me.color, skin: me.skin });
 
-        // 유저 승리 체크
         if (checkWin(room.board, x, y, stoneValue)) {
             endGame(myRoom, me.name);
         } else {
-            room.turn = 'white'; // AI 턴으로 넘김
-            io.to(myRoom).emit('status', 'AI가 생각 중입니다...');
+            room.turn = 'white'; 
+            io.to(myRoom).emit('status', 'Gemini AI가 수를 생각 중입니다... (약 2초)');
 
             if (room.isAiGame) {
-                // [AI Action] 0.5초 뒤에 AI가 둠
-                setTimeout(() => {
-                    if(!rooms[myRoom]) return; // 방이 사라졌으면 중단
-                    const aiMove = ai.getBestMove(room.board, room.aiDifficulty);
-                    const aiY = aiMove.y;
-                    const aiX = aiMove.x;
-                    
-                    const aiStoneValue = `white:default`;
-                    room.board[aiY][aiX] = aiStoneValue;
-                    room.turn = 'black'; // 다시 유저 턴
+                // [AI Action] Gemini에게 물어보기
+                // 비동기 함수 안에서 실행
+                (async () => {
+                    try {
+                        // ★ 핵심: 여기서 Gemini를 호출하고 기다립니다.
+                        const aiMove = await ai.getBestMove(room.board, room.aiDifficulty);
+                        
+                        if(!rooms[myRoom]) return; // 기다리는 동안 방이 사라졌으면 중단
 
-                    io.to(myRoom).emit('updateBoard', { x: aiX, y: aiY, color: 'white', skin: 'default' });
-                    
-                    if (checkWin(room.board, aiX, aiY, aiStoneValue)) {
-                        endGame(myRoom, `AI (${room.aiDifficulty})`);
-                    } else {
-                        io.to(myRoom).emit('status', '당신의 차례입니다.');
+                        const aiY = aiMove.y;
+                        const aiX = aiMove.x;
+                        const aiStoneValue = `white:default`;
+                        
+                        room.board[aiY][aiX] = aiStoneValue;
+                        room.turn = 'black';
+
+                        io.to(myRoom).emit('updateBoard', { x: aiX, y: aiY, color: 'white', skin: 'default' });
+                        
+                        if (checkWin(room.board, aiX, aiY, aiStoneValue)) {
+                            endGame(myRoom, `AI (${room.aiDifficulty})`);
+                        } else {
+                            io.to(myRoom).emit('status', '당신의 차례입니다.');
+                        }
+                    } catch (e) {
+                        console.error("AI Turn Error:", e);
+                        // 에러 나면 턴 넘기기 (멈춤 방지)
+                        room.turn = 'black';
+                        io.to(myRoom).emit('status', 'AI 오류! 다시 두세요.');
                     }
-                }, 800);
+                })();
             } else {
-                // 사람 대 사람일 경우 턴 넘기기 및 타이머 리셋
                 resetTimer(myRoom);
                 const nextName = room.players.find(p => p.color === room.turn).name;
                 io.to(myRoom).emit('status', `${nextName} 차례`);
@@ -315,3 +323,4 @@ function checkWin(board, x, y, stoneValue) {
 }
 
 server.listen(PORT, () => console.log(`서버 실행: ${PORT}`));
+
