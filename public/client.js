@@ -1,6 +1,5 @@
 const socket = io();
 
-// UI Elements
 const board = document.getElementById('board');
 const statusDiv = document.getElementById('status');
 const roomListDiv = document.getElementById('room-list');
@@ -68,7 +67,7 @@ function toggleTheme() {
 function toggleBgm() {
     if (!bgm) return;
     if (bgm.paused) {
-        bgm.play().catch(e => console.log("User interaction needed"));
+        bgm.play().catch(e => console.log("Interaction needed"));
         btnBgm.innerText = "🎵 BGM ON";
     } else {
         bgm.pause();
@@ -88,14 +87,6 @@ function logout() {
     clearTimeout(activityTimer);
     localStorage.clear();
     location.reload();
-}
-
-// [AI 관련 함수]
-function openAiModal() { document.getElementById('ai-modal').classList.remove('hidden'); }
-function closeAiModal() { document.getElementById('ai-modal').classList.add('hidden'); }
-function startAiGame(difficulty) {
-    closeAiModal();
-    socket.emit('createAiRoom', difficulty);
 }
 
 socket.on('loginSuccess', (data) => {
@@ -123,7 +114,6 @@ function setupActivityMonitoring() {
     });
     resetActivityTimer();
 }
-
 function resetActivityTimer() {
     clearTimeout(activityTimer);
     activityTimer = setTimeout(() => {
@@ -136,12 +126,10 @@ socket.on('force_logout', (message) => { alert(message); logout(); });
 function updateUserInfo(data) {
     document.getElementById('user-hello').innerText = `안녕하세요, ${data.name}님!`;
     document.getElementById('user-points').innerText = `${data.points} P`;
-    
     const stats = data.stats || { wins: 0, loses: 0 };
     const total = stats.wins + stats.loses;
     const rate = total === 0 ? 0 : Math.round((stats.wins / total) * 100);
     document.getElementById('user-stats').innerText = `${stats.wins}승 ${stats.loses}패 (${rate}%)`;
-
     window.myItems = data.items || [];
     window.myEquipped = data.equipped || 'default';
 }
@@ -165,10 +153,8 @@ function renderShopItems() {
         { id: 'diamond', name: '다이아', price: 1000 },
         { id: 'ruby', name: '루비', price: 2000 }
     ];
-    
     const container = document.getElementById('shop-items');
     container.innerHTML = '';
-
     items.forEach(item => {
         const div = document.createElement('div');
         div.style.border = '1px solid #ddd';
@@ -189,12 +175,12 @@ function renderShopItems() {
         blackStone.className = `stone black ${item.id}`; 
         blackStone.style.width = '35px';
         blackStone.style.height = '35px';
-        
+        blackStone.style.boxShadow = '1px 1px 3px rgba(0,0,0,0.3)';
         const whiteStone = document.createElement('div');
         whiteStone.className = `stone white ${item.id}`;
         whiteStone.style.width = '35px';
         whiteStone.style.height = '35px';
-
+        whiteStone.style.boxShadow = '1px 1px 3px rgba(0,0,0,0.3)';
         previewBox.append(blackStone, whiteStone);
 
         const name = document.createElement('div');
@@ -205,7 +191,6 @@ function renderShopItems() {
         price.innerText = `${item.price}P`;
         price.style.color = '#555';
         price.style.fontSize = '12px';
-        
         const btn = document.createElement('button');
         btn.style.marginTop = '5px';
         btn.style.fontSize = '12px';
@@ -236,7 +221,6 @@ function renderShopItems() {
                 }
             };
         }
-
         div.append(previewBox, name, price, btn);
         container.appendChild(div);
     });
@@ -300,24 +284,17 @@ socket.on('roomJoined', (data) => {
     myColor = data.color;
     amIHost = data.isHost;
     isSpectator = data.isSpectator;
-
     document.getElementById('lobby-screen').classList.add('hidden');
     document.getElementById('game-screen').classList.remove('hidden');
     document.getElementById('room-title').innerText = `방: ${data.roomName}`;
-    
-    btnReady.classList.add('hidden');
-    btnStart.classList.add('hidden');
-    spectatorMsg.classList.add('hidden');
-
+    btnReady.classList.add('hidden'); btnStart.classList.add('hidden'); spectatorMsg.classList.add('hidden');
     if (isSpectator) spectatorMsg.classList.remove('hidden');
     else {
         btnReady.innerText = "준비";
         if (amIHost) btnStart.classList.remove('hidden');
         else btnReady.classList.remove('hidden');
     }
-
-    chatMsgs.innerHTML = '';
-    initBoard(data.board);
+    chatMsgs.innerHTML = ''; initBoard(data.board);
 });
 socket.on('updateRoomInfo', (data) => {
     const { players, spectators, p2Ready } = data;
@@ -327,61 +304,41 @@ socket.on('updateRoomInfo', (data) => {
     let p2Text = p2 ? `⚪${p2.name}` : '⚪?';
     if (p2 && p2Ready) p2Text += " [준비완료]";
     document.getElementById('player-list').innerText = `${p1Text} vs ${p2Text}`;
-
     spectatorListDiv.innerHTML = '';
-    spectators.forEach(s => {
-        const div = document.createElement('div');
-        div.innerText = `👤 ${s.name}`;
-        spectatorListDiv.appendChild(div);
-    });
-
-    if (amIHost && !isSpectator) {
-        btnStart.disabled = !p2Ready;
-        btnStart.style.opacity = p2Ready ? 1 : 0.5;
-    }
+    spectators.forEach(s => { const div = document.createElement('div'); div.innerText = `👤 ${s.name}`; spectatorListDiv.appendChild(div); });
+    if (amIHost && !isSpectator) { btnStart.disabled = !p2Ready; btnStart.style.opacity = p2Ready ? 1 : 0.5; }
 });
 function toggleReady() { socket.emit('toggleReady'); }
 function startGame() { socket.emit('startGame'); }
 socket.on('gameStart', (msg) => {
     try { soundWin.play(); } catch(e){} 
     setTimeout(() => { alert(msg); statusDiv.innerText = msg; }, 100);
-    btnReady.classList.add('hidden');
-    btnStart.classList.add('hidden');
+    btnReady.classList.add('hidden'); btnStart.classList.add('hidden');
 });
 function initBoard(currentBoardData) {
-    board.innerHTML = '';
-    lastStoneElement = null;
+    board.innerHTML = ''; lastStoneElement = null;
     for (let y = 0; y < 19; y++) {
         for (let x = 0; x < 19; x++) {
-            const cell = document.createElement('div');
-            cell.className = 'cell';
+            const cell = document.createElement('div'); cell.className = 'cell';
             cell.onclick = () => { if(!isSpectator && myColor) socket.emit('placeStone', { x, y }); };
             board.appendChild(cell);
             if (currentBoardData && currentBoardData[y][x]) {
                 const parts = currentBoardData[y][x].split(':');
-                const stone = document.createElement('div');
-                stone.className = `stone ${parts[0]} ${parts[1]||'default'}`;
+                const stone = document.createElement('div'); stone.className = `stone ${parts[0]} ${parts[1]||'default'}`;
                 cell.appendChild(stone);
             }
         }
     }
 }
 socket.on('updateBoard', (data) => {
-    const index = data.y * 19 + data.x;
-    const cell = board.children[index];
-    const stone = document.createElement('div');
-    stone.className = `stone ${data.color} ${data.skin || 'default'}`;
+    const index = data.y * 19 + data.x; const cell = board.children[index];
+    const stone = document.createElement('div'); stone.className = `stone ${data.color} ${data.skin || 'default'}`;
     if (lastStoneElement) lastStoneElement.classList.remove('last-move');
-    stone.classList.add('last-move');
-    lastStoneElement = stone;
-    cell.appendChild(stone);
-    try { soundStone.play(); } catch(e) {}
+    stone.classList.add('last-move'); lastStoneElement = stone;
+    cell.appendChild(stone); try { soundStone.play(); } catch(e) {}
 });
 socket.on('status', (msg) => statusDiv.innerText = msg);
-socket.on('timerUpdate', (time) => {
-    timerSpan.innerText = time;
-    timerSpan.style.color = time <= 5 ? 'red' : 'black';
-});
+socket.on('timerUpdate', (time) => { timerSpan.innerText = time; timerSpan.style.color = time <= 5 ? 'red' : 'black'; });
 socket.on('gameOver', (data) => {
     if (data.winner === myName) try { soundWin.play(); } catch(e){} else try { soundLose.play(); } catch(e){}
     setTimeout(() => { alert(`게임 종료! ${data.msg}`); location.reload(); }, 200);
