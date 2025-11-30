@@ -2,6 +2,7 @@
 /* 1. 테마 변수 정의 (CSS Variables) */
 /* ----------------------------------------------------------------------- */
 :root {
+    /* Light Mode (기본값) */
     --bg-color: #f4f4f4;
     --text-color: #333;
     --box-bg: white;
@@ -9,8 +10,10 @@
     --input-bg: white;
     --input-color: black;
     --chat-bg: #f9f9f9;
+    --modal-bg: white;
 }
 :root[data-theme='dark'] {
+    /* Dark Mode (부드러운 다크 그레이) */
     --bg-color: #2c2c3e; 
     --text-color: #f0f0f0; 
     --box-bg: #3a3a4e; 
@@ -18,6 +21,7 @@
     --input-bg: rgba(255, 255, 255, 0.05);
     --input-color: white;
     --chat-bg: #333345;
+    --modal-bg: #2c2c3e;
 }
 
 /* 기본 설정 */
@@ -106,6 +110,7 @@ input { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid var(--
 .chat-input-box { display: flex; border-top: 1px solid var(--box-border); padding: 5px; } 
 #chat-input { flex: 1; border: none; margin: 0; padding: 10px; background: var(--input-bg); color: var(--input-color); outline: none; }
 #spectator-box { height: 150px; background: var(--box-bg); color: var(--text-color); border: 1px solid var(--box-border); overflow-y: auto; padding: 10px; border-radius: 5px; }
+#spectator-list { color: var(--text-color); }
 
 
 /* 상점 모달 */
